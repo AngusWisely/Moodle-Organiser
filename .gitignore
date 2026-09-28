@@ -1,0 +1,5 @@
+.browser-profile/
+materials/
+__pycache__/
+.venv/
+*.zip
