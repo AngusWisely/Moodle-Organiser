@@ -21,3 +21,14 @@ Sign in to Moodle in the browser window, return to Terminal, press Enter, and ch
 The script keeps a local browser profile for sign-in, but never asks for a password. `materials/` and `.browser-profile/` are ignored by Git so course documents and sign-in data stay off GitHub.
 
 This is a personal helper, so Moodle layout changes or external services such as Echo360 may need manual handling.
+
+## Development
+
+The code is moving into the `student_os/` package (parsing in `student_os/moodle/scraper.py`, naming in `storage.py`, URL rules in `urls.py`). `organiser.py` still works exactly as before.
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+python3 -m pytest
+```
+
+Tests never contact Moodle. `data/` (the upcoming sync database) is ignored by Git, like `materials/`.
