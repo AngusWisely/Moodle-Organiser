@@ -1,5 +1,11 @@
 .browser-profile/
 materials/
+data/
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
 __pycache__/
+.pytest_cache/
 .venv/
 *.zip

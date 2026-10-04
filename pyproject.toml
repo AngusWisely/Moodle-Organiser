@@ -1,0 +1,9 @@
+[project]
+name = "student-os"
+version = "0.1.0"
+description = "Personal university tooling; Milestone 1 is Nottingham Moodle sync."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

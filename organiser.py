@@ -4,134 +4,29 @@ from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
-import mimetypes
-import re
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from pathlib import Path
-from urllib.parse import unquote, urljoin, urlparse
+from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
-BASE = "https://moodle.nottingham.ac.uk"
-COURSES_URL = f"{BASE}/my/courses.php"
+# Parsing, naming and URL rules now live in the student_os package. They are
+# re-exported here so existing imports of organiser.<name> keep working.
+from student_os.moodle.models import Item
+from student_os.moodle.scraper import activities, course_links, files_from_html, section_links
+from student_os.moodle.storage import MIME_EXT, VIDEO_EXT, file_name, safe_name
+from student_os.moodle.urls import BASE, COURSES_URL, allowed
+
+__all__ = [
+    "BASE", "COURSES_URL", "MIME_EXT", "VIDEO_EXT", "Item", "activities", "allowed",
+    "course_links", "file_name", "files_from_html", "process", "safe_name", "section_links",
+]
+
 ROOT = Path(__file__).resolve().parent
 OUTPUT = ROOT / "materials"
 PROFILE = ROOT / ".browser-profile"
 FIELDS = ("module", "section", "title", "type", "url", "status", "local_file")
-MIME_EXT = {
-    "application/pdf": ".pdf",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-    "application/vnd.ms-powerpoint": ".ppt",
-    "application/msword": ".doc",
-}
-VIDEO_EXT = {".mp4", ".mov", ".m4v", ".webm", ".mkv"}
-
-
-@dataclass(frozen=True)
-class Item:
-    module: str
-    section: str
-    title: str
-    type: str
-    url: str
-    status: str = "linked"
-    local_file: str = ""
-
-
-def safe_name(value: str) -> str:
-    """Make a cross-platform, bounded path component."""
-    value = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "-", value)
-    value = re.sub(r"\s+", " ", value).strip(" .-")
-    if value.upper() in {"CON", "PRN", "AUX", "NUL", "COM1", "LPT1"}:
-        value = f"_{value}"
-    return value[:95].rstrip(" .") or "Untitled"
-
-
-def allowed(url: str) -> bool:
-    parts = urlparse(url)
-    return parts.scheme == "https" and parts.hostname == "moodle.nottingham.ac.uk"
-
-
-def course_links(html: str, base: str = BASE) -> list[tuple[str, str]]:
-    soup = BeautifulSoup(html, "html.parser")
-    found: dict[str, str] = {}
-    for a in soup.select('a[href*="/course/view.php"]'):
-        url = urljoin(base, a.get("href", ""))
-        if allowed(url) and "id=" in urlparse(url).query:
-            title = a.get_text(" ", strip=True)
-            if title and title.lower() not in {"view course", "course"}:
-                found.setdefault(url.split("#", 1)[0], title)
-    return [(name, url) for url, name in found.items()]
-
-
-def section_links(html: str, base: str) -> list[str]:
-    soup = BeautifulSoup(html, "html.parser")
-    urls = []
-    for a in soup.select('a[href*="/course/section.php"]'):
-        url = urljoin(base, a.get("href", ""))
-        if allowed(url) and url not in urls:
-            urls.append(url)
-    return urls[:100]
-
-
-def activities(html: str, module: str, base: str) -> list[Item]:
-    """Collect Moodle activity links, retaining the nearest section heading."""
-    soup = BeautifulSoup(html, "html.parser")
-    result: list[Item] = []
-    seen: set[str] = set()
-    sections = soup.select("li.section, section.course-section, [data-for='section']")
-    if not sections:
-        sections = [soup]
-    for section in sections:
-        heading = section.select_one(".sectionname, .section-title, h3, h2")
-        section_name = heading.get_text(" ", strip=True) if heading else "General"
-        blocks = section.select("li.activity, div.activity-item, div.activity")
-        if not blocks:
-            blocks = [section]
-        for block in blocks:
-            for a in block.select("a[href]"):
-                url = urljoin(base, a["href"]).split("#", 1)[0]
-                if not allowed(url) or url in seen:
-                    continue
-                path = urlparse(url).path
-                match = re.search(r"/mod/([a-z]+)/view\.php", path)
-                if not match and "/pluginfile.php/" not in path:
-                    continue
-                title_node = a.select_one(".instancename")
-                title = (title_node or a).get_text(" ", strip=True)
-                title = re.sub(r"\s*File\s*$", "", title).strip()
-                if not title:
-                    continue
-                kind = match.group(1) if match else "file"
-                result.append(Item(module, section_name, title, kind, url))
-                seen.add(url)
-    return result
-
-
-def file_name(title: str, url: str, content_type: str) -> str:
-    path_name = unquote(Path(urlparse(url).path).name)
-    suffix = Path(path_name).suffix.lower()
-    if not re.fullmatch(r"\.[a-z0-9]{1,8}", suffix):
-        suffix = MIME_EXT.get(content_type, mimetypes.guess_extension(content_type) or "")
-    stem = safe_name(title)
-    if suffix and stem.lower().endswith(suffix):
-        stem = stem[: -len(suffix)]
-    digest = hashlib.sha256(url.encode()).hexdigest()[:8]
-    return f"{stem}-{digest}{suffix}"
-
-
-def files_from_html(html: str, base: str) -> list[tuple[str, str]]:
-    soup = BeautifulSoup(html, "html.parser")
-    found = {}
-    for a in soup.select('a[href*="pluginfile.php/"]'):
-        url = urljoin(base, a.get("href", ""))
-        if allowed(url):
-            found[url] = a.get_text(" ", strip=True) or unquote(Path(urlparse(url).path).name)
-    return list(found.items())
 
 
 def local_get(context, url: str):
