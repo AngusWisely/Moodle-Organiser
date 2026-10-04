@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 from .moodle.storage import INCOMING, VERSIONS, resolve_local, sha256_file
 from .moodle.urls import cmid, resource_key
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Resource.status values
 PENDING = "pending"          # seen, no successful download yet (retried every run)
@@ -102,6 +102,36 @@ def connect(path: Path | str) -> sqlite3.Connection:
     return conn
 
 
+_SCHEMA_V2 = """
+-- Course library: what was read out of each downloaded file (see student_os.library).
+CREATE TABLE documents (
+    resource_id  INTEGER PRIMARY KEY REFERENCES resources(id),
+    content_hash TEXT NOT NULL,             -- the file version this was read from
+    kind         TEXT,                      -- pdf | pptx | docx | text
+    page_count   INTEGER NOT NULL DEFAULT 0,
+    word_count   INTEGER NOT NULL DEFAULT 0,
+    outline      TEXT NOT NULL DEFAULT '[]', -- JSON [[page, title], ...]
+    truncated    INTEGER NOT NULL DEFAULT 0,
+    error        TEXT,                      -- why it couldn't be read, if so
+    indexed_at   TEXT NOT NULL
+);
+
+CREATE VIRTUAL TABLE page_search USING fts5(
+    title, body, resource_id UNINDEXED, page UNINDEXED, tokenize = 'porter unicode61'
+);
+
+CREATE TABLE date_mentions (
+    id          INTEGER PRIMARY KEY,
+    resource_id INTEGER NOT NULL REFERENCES resources(id),
+    on_date     TEXT NOT NULL,              -- YYYY-MM-DD
+    kind        TEXT NOT NULL,              -- deadline | exam | date
+    page        INTEGER,
+    snippet     TEXT NOT NULL
+);
+CREATE INDEX date_mentions_on ON date_mentions(on_date);
+"""
+
+
 def migrate(conn: sqlite3.Connection) -> None:
     """Apply schema changes using ``PRAGMA user_version``."""
     version = conn.execute("PRAGMA user_version").fetchone()[0]
@@ -111,6 +141,10 @@ def migrate(conn: sqlite3.Connection) -> None:
         with conn:
             conn.executescript(_SCHEMA)
             conn.execute("PRAGMA user_version = 1")
+    if version < 2:
+        with conn:
+            conn.executescript(_SCHEMA_V2)
+            conn.execute("PRAGMA user_version = 2")
 
 
 def utc_now() -> str:

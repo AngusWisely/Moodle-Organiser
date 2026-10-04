@@ -83,6 +83,8 @@ def run(conn: sqlite3.Connection, root: Path, materials: Path, options: SyncOpti
             with conn:
                 db.finish_run(conn, run_id, outcome, db.utc_now())
         print("\n" + format_totals(reports, dry_run=options.dry_run))
+        if not options.dry_run:
+            update_library(conn, root)
         others = len(on_moodle) - len(modules)
         if others > 0:
             print(f"({others} other module{'s' if others != 1 else ''} on Moodle not synced; use --select to change)")
@@ -187,6 +189,20 @@ def format_recent(events: list, days: float, tz: tzinfo | None = None) -> str:
         where = " / ".join(part for part in (e["section"], e["title"]) if part)
         lines.append(f"  {when.astimezone(tz):%d %b %H:%M}  {e['kind']:<10} {where}")
     return "\n".join(lines)
+
+
+def update_library(conn: sqlite3.Connection, root: Path) -> None:
+    """Read any new or changed files so search, outlines and dates stay current."""
+    from ..library.index import index_library
+
+    try:
+        report = index_library(conn, root)
+    except Exception as exc:  # the library is a bonus; never fail the sync over it
+        print(f"Library: not updated ({type(exc).__name__}: {exc})")
+        return
+    if report.indexed or report.failed:
+        failed = f", {len(report.failed)} couldn't be read" if report.failed else ""
+        print(f"Library: {report.indexed} file{'s' if report.indexed != 1 else ''} read for search{failed}")
 
 
 # --- setup -------------------------------------------------------------------------
