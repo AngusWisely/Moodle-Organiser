@@ -32,6 +32,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body { background: var(--paper); color: var(--ink); font: 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
 a { color: inherit; }
@@ -144,6 +145,35 @@ h2 { font-size: 17px; font-weight: 600; margin: 0 0 14px; }
 .hit .snip { font-family: var(--serif); font-size: 15px; margin-top: 4px; }
 mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1px; }
 
+/* study notes */
+.notes { max-width: 1100px; margin: 0 0 34px; padding: 20px 22px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; }
+.notes h2 { margin-bottom: 10px; }
+.notes .summary { font-family: var(--serif); font-size: 17px; line-height: 1.55; max-width: 62ch; margin: 0 0 14px; }
+.notes ul { margin: 0 0 14px; padding-left: 20px; font-family: var(--serif); font-size: 15px; max-width: 70ch; }
+.notes li { margin: 0 0 4px; }
+.notes .byline { font-size: 13px; color: var(--graphite); margin: 0; }
+.notes .row-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+.notes textarea { width: 100%; min-height: 160px; font: 14px/1.45 var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 10px; margin: 10px 0; }
+.notes .help { font-size: 14px; color: var(--graphite); max-width: 62ch; }
+.notes code { font-size: 13px; background: var(--rule-soft); padding: 1px 5px; border-radius: 4px; }
+.notes .warn { color: var(--amber); font-size: 14px; }
+.btn[disabled] { opacity: .5; cursor: progress; }
+
+/* revise */
+.deck { max-width: 680px; }
+.progress { font-size: 13px; color: var(--graphite); margin: 0 0 14px; font-variant-numeric: tabular-nums; }
+.card { background: var(--sheet); border: 1px solid var(--rule); border-left: 4px solid var(--teal); border-radius: 12px; padding: 26px 28px; min-height: 220px; }
+.card .from { font-size: 13px; color: var(--graphite); margin: 0 0 14px; }
+.card .from a { color: var(--graphite); }
+.card .q { font-family: var(--serif); font-size: 22px; line-height: 1.4; margin: 0; }
+.card .a { font-family: var(--serif); font-size: 18px; line-height: 1.5; margin: 18px 0 0; padding-top: 16px; border-top: 1px dashed var(--rule); }
+.grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.grades .btn { justify-content: center; flex-direction: column; gap: 0; }
+.grades .btn small { font-weight: 400; font-size: 12px; color: var(--graphite); }
+.grades .again:hover { border-color: var(--brick); }
+.keys { font-size: 12px; color: var(--graphite); margin-top: 12px; }
+.totals { margin-top: 30px; max-width: 680px; }
+.totals .row { grid-template-columns: minmax(0, 1fr) auto auto; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 9px 16px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
 .toast.show { opacity: 1; }
 
@@ -216,6 +246,7 @@ const highlighted = text => {
   }, false);
   return span;
 };
+const fill = (el, ...children) => { el.append(...children.flat(Infinity).filter(c => c !== null && c !== undefined && c !== false)); return el; };
 const show = (...children) => view.replaceChildren(...children.flat(Infinity).filter(c => c !== null && c !== undefined && c !== false));
 const toast = message => {
   const el = document.getElementById("toast");
@@ -253,6 +284,9 @@ function renderNav(current) {
   nav.replaceChildren(
     h("li", {}, h("a", { href: "#/", "aria-current": current === "home" ? "page" : null },
       h("span", { class: "name" }, "Overview"))),
+    h("li", {}, h("a", { href: "#/revise", "aria-current": current === "revise" ? "page" : null },
+      h("span", { class: "name" }, "Revise flashcards"),
+      h("span", { class: `count ${overview?.cards_due ? "fresh" : ""}` }, overview?.cards_due ? `${overview.cards_due} due` : ""))),
     h("li", { class: "nav-gap", "aria-hidden": "true" }),
     ...(overview?.modules || []).map(m => h("li", {},
       h("a", { href: `#/module/${m.id}`, title: m.full_name, "aria-current": current === `module/${m.id}` ? "page" : null },
@@ -376,11 +410,194 @@ async function renderFile(id) {
       file.has_file ? h("button", { class: "btn primary", onclick: () => openFile() }, isPdf ? "Read" : "Open") : null,
       file.has_file && isPdf ? h("button", { class: "btn", onclick: async () => { await api(`/api/open/${file.id}`, { method: "POST" }); toast("Opened in Preview"); } }, "Open in Preview") : null,
       h("a", { class: "btn", href: file.moodle_url, target: "_blank", rel: "noopener" }, "Open on Moodle")),
+    notesPanel(file),
     h("div", { class: "file-grid" },
       h("section", {}, h("h2", {}, "Outline"), outline),
       h("section", {}, h("h2", {}, "Dates in this file"), dates,
         file.versions.length ? h("div", { style: "margin-top:26px" }, h("h2", {}, "Earlier versions"),
           file.versions.map(v => h("p", { class: "muted" }, `Replaced ${new Date(v.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — kept in ${v.path}`))) : null)));
+}
+
+/* --- study notes ------------------------------------------------------------ */
+function notesPanel(file) {
+  const panel = h("section", { class: "notes", "aria-live": "polite" });
+  const notes = file.notes;
+  if (notes) {
+    const made = notes.source === "claude" ? "Notes from Claude" : `Notes made on this Mac with ${notes.model}`;
+    fill(panel,
+      h("h2", {}, "Study notes"),
+      notes.outdated ? h("p", { class: "warn" }, "This file has changed since these notes were made.") : null,
+      notes.summary ? h("p", { class: "summary" }, notes.summary) : null,
+      notes.key_points.length ? h("ul", {}, notes.key_points.map(point => h("li", {}, point))) : null,
+      h("p", { class: "byline" }, `${made}, ${new Date(notes.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}.`,
+        notes.truncated ? " Only the first part of this long file was used." : ""),
+      h("div", { class: "row-actions" },
+        notes.flashcards.length ? h("a", { class: "btn primary", href: `#/revise?file=${file.id}` }, `Revise ${notes.flashcards.length} flashcards`) : null,
+        makeButtons(file, panel, true)));
+  } else if (file.readable) {
+    fill(panel, h("h2", {}, "Study notes"),
+      h("p", { class: "help" }, "Get a summary, the key points and flashcards for this file, free."),
+      h("div", { class: "row-actions" }, makeButtons(file, panel, false)));
+  } else {
+    return null;
+  }
+  return panel;
+}
+
+function makeButtons(file, panel, again) {
+  const wrap = h("span", { class: "row-actions", style: "margin:0" });
+  const local = h("button", { class: again ? "btn" : "btn primary", onclick: () => summariseHere(file, panel, local) },
+    again ? "Remake on this Mac" : "Summarise on this Mac");
+  const claude = h("button", { class: "btn", onclick: () => copyForClaude(file, panel) }, "Copy for Claude");
+  wrap.append(local, claude);
+  return wrap;
+}
+
+async function summariseHere(file, panel, button) {
+  const ai = await api("/api/ai");
+  if (!ai.running || !ai.model) {
+    panel.querySelector(".ollama-help")?.remove();
+    panel.append(h("div", { class: "help ollama-help" },
+      h("p", {}, ai.running ? "Ollama is running but has no model yet. In Terminal, run:" : "To summarise on this Mac, install the free Ollama app from ollama.com, open it, then in Terminal run:"),
+      h("p", {}, h("code", {}, "ollama pull gemma3:4b")),
+      h("p", {}, "Then press the button again. Or use Copy for Claude instead.")));
+    return;
+  }
+  button.disabled = true;
+  button.textContent = `Summarising with ${ai.model}…`;
+  toast("Usually 20 seconds to 2 minutes");
+  try {
+    file.notes = await api(`/api/notes/${file.id}/ollama`, { method: "POST" });
+    panel.replaceWith(notesPanel(file));
+    refreshOverview();
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "Try again";
+    toast(error.message);
+  }
+}
+
+async function copyForClaude(file, panel) {
+  let prompt;
+  try { prompt = (await api(`/api/claude-prompt/${file.id}`)).prompt; }
+  catch (error) { toast(error.message); return; }
+  try { await navigator.clipboard.writeText(prompt); toast("Copied. Paste it into Claude"); }
+  catch { toast("Couldn't copy automatically"); }
+  panel.querySelector(".paste")?.remove();
+  const box = h("textarea", { placeholder: "Paste Claude's whole reply here", "aria-label": "Claude's reply" });
+  const save = h("button", { class: "btn primary", onclick: async () => {
+    save.disabled = true;
+    try {
+      file.notes = await api(`/api/notes/${file.id}/claude`, { method: "POST", body: JSON.stringify({ reply: box.value }) });
+      panel.replaceWith(notesPanel(file));
+      refreshOverview();
+      toast("Notes saved");
+    } catch (error) { save.disabled = false; toast(error.message); }
+  } }, "Save notes");
+  panel.append(h("div", { class: "paste" },
+    h("p", { class: "help" }, "The request and this file's text are on your clipboard. Paste them into a new Claude chat, then paste Claude's whole reply below."),
+    h("div", { class: "row-actions" }, h("a", { class: "btn", href: "https://claude.ai/new", target: "_blank", rel: "noopener" }, "Open Claude")),
+    box, save));
+  box.focus();
+}
+
+async function refreshOverview() {
+  overview = await api("/api/overview");
+  renderNav(location.hash.startsWith("#/revise") ? "revise" : "");
+}
+
+/* --- revise flashcards --------------------------------------------------------- */
+async function renderRevise(fileId) {
+  const data = await api("/api/cards");
+  let queue = data.cards.filter(card => !fileId || String(card.resource_id) === fileId);
+  const total = queue.length;
+  let done = 0;
+  const deck = h("div", { class: "deck" });
+  const totals = h("section", { class: "totals" });
+  if (data.totals.length) {
+    fill(totals, h("h2", {}, "Your flashcards"), data.totals.map(t => h("div", { class: "row" },
+      h("span", { class: "title" }, t.module),
+      h("span", { class: "where" }, `${t.learned} of ${t.total} learned`),
+      h("span", { class: `badge ${t.due ? "" : "removed"}` }, t.due ? `${t.due} due` : "none due"))));
+  }
+  const maker = h("section", { class: "notes", style: "margin-top:30px;max-width:680px", "aria-live": "polite" });
+  show(h("h1", {}, "Revise"),
+       h("p", { class: "sub" }, fileId && queue[0] ? `Flashcards from ${queue[0].title}` : "Cards come back just before you'd forget them."),
+       deck, fileId ? null : maker, totals);
+  if (!fileId) batchPanel(maker);
+
+  const next = () => {
+    document.onkeydown = null;
+    if (!queue.length) {
+      deck.replaceChildren(h("p", { class: "empty" }, total
+        ? `Done: ${total} ${total === 1 ? "card" : "cards"} revised. Come back tomorrow for the next ones.`
+        : "No flashcards are due. Make some from a file's page with Summarise on this Mac or Copy for Claude."));
+      refreshOverview();
+      return;
+    }
+    const card = queue[0];
+    const answer = h("p", { class: "a", hidden: true }, card.answer);
+    const grades = h("div", { class: "grades", hidden: true },
+      [["again", "Again", "see it again today"], ["hard", "Hard", "a bit later"], ["good", "Good", "spaced out"], ["easy", "Easy", "much later"]]
+        .map(([grade, label, hint], n) => h("button", { class: `btn ${grade}`, onclick: () => answerCard(grade) }, label, h("small", {}, hint))));
+    const reveal = h("button", { class: "btn primary", style: "margin-top:16px", onclick: () => flip() }, "Show answer");
+    const flip = () => { answer.hidden = false; grades.hidden = false; reveal.remove(); grades.querySelector(".good").focus(); };
+    const answerCard = async grade => {
+      document.onkeydown = null;
+      await api(`/api/cards/${card.id}/review`, { method: "POST", body: JSON.stringify({ grade }) });
+      queue.shift();
+      if (grade === "again") queue.push(card); else done += 1;
+      next();
+    };
+    deck.replaceChildren(
+      h("p", { class: "progress" }, `${done + 1} of ${total}`),
+      h("article", { class: "card" },
+        h("p", { class: "from" }, `${card.module}, `, h("a", { href: `#/file/${card.resource_id}` }, card.title)),
+        h("p", { class: "q" }, card.question), answer),
+      reveal, grades,
+      h("p", { class: "keys" }, "Keyboard: space shows the answer, then 1 to 4."));
+    document.onkeydown = event => {
+      if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
+      if (event.key === " " && reveal.isConnected) { event.preventDefault(); flip(); }
+      else if (grades.hidden === false && "1234".includes(event.key)) answerCard(["again", "hard", "good", "easy"][Number(event.key) - 1]);
+    };
+    reveal.focus();
+  };
+  next();
+}
+
+/* notes for every file, made in the background on this Mac */
+async function batchPanel(panel) {
+  let ai;
+  try { ai = await api("/api/ai"); } catch { return; }
+  const batch = ai.batch;
+  const running = batch && batch.running;
+  panel.replaceChildren();
+  const finished = batch && !running && batch.total;
+  if (!running && !ai.waiting && !finished) { panel.remove(); return; }
+  fill(panel, h("h2", {}, "Notes for all your files"));
+  if (running) {
+    fill(panel,
+      h("p", { class: "help" }, `Making notes on this Mac: ${batch.done} of ${batch.total} done.`, batch.current ? ` Now: ${batch.current}.` : ""),
+      h("p", { class: "help" }, "You can keep using the page, or close it; this carries on while the Study desk is open."),
+      h("button", { class: "btn", onclick: async () => { await api("/api/notes/stop", { method: "POST" }); toast("Stopping after this file"); } }, "Stop"));
+    clearTimeout(batchPanel.timer);
+    batchPanel.timer = setTimeout(() => { if (panel.isConnected) batchPanel(panel); }, 3000);
+    return;
+  }
+  if (finished) {
+    fill(panel, h("p", { class: "help" }, batch.stopped ? `Stopped after ${batch.done} ${batch.done === 1 ? "file" : "files"}.` : `Finished: notes made for ${batch.done} ${batch.done === 1 ? "file" : "files"}.`),
+      batch.errors.map(e => h("p", { class: "warn" }, e)));
+    refreshOverview();
+    if (!ai.waiting) return;
+  }
+  if (!ai.running || !ai.model) {
+    fill(panel, h("p", { class: "help" }, `${ai.waiting} files don't have notes yet. To make them for free on this Mac, install the Ollama app from ollama.com, open it, then in Terminal run `, h("code", {}, "ollama pull gemma3:4b"), "."));
+    return;
+  }
+  fill(panel,
+    h("p", { class: "help" }, `${ai.waiting} ${ai.waiting === 1 ? "file doesn't" : "files don't"} have notes yet. ${ai.model} can make them on this Mac, newest first, usually under a minute each. Very long reference books are skipped; open one to make its notes on its own.`),
+    h("button", { class: "btn primary", onclick: async () => { await api("/api/notes/all", { method: "POST" }); batchPanel(panel); } }, `Make notes for ${ai.waiting} ${ai.waiting === 1 ? "file" : "files"}`));
 }
 
 async function renderSearch(q) {
@@ -402,11 +619,13 @@ async function renderSearch(q) {
 async function route() {
   const hash = location.hash.slice(1) || "/";
   const [, page, arg] = hash.split("/");
+  document.onkeydown = null;
   try {
     if (!overview) overview = await api("/api/overview");
     if (!page) { renderNav("home"); renderHome(); }
     else if (page === "module") { renderNav(`module/${arg}`); await renderModule(arg); }
     else if (page === "file") { renderNav(""); await renderFile(arg); }
+    else if (page.startsWith("revise")) { renderNav("revise"); await renderRevise(new URLSearchParams(page.split("?")[1] || "").get("file")); }
     else if (page.startsWith("search")) { renderNav(""); await renderSearch(decodeURIComponent(hash.split("?q=")[1] || "")); }
     window.scrollTo(0, 0);
   } catch (error) {

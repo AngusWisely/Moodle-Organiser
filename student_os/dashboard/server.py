@@ -24,10 +24,12 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .. import db
+from ..library import cards, notes
 from ..moodle.storage import resolve_local
 from . import queries
 
 STATIC = Path(__file__).parent / "static"
+MAX_BODY = 2_000_000
 
 
 def open_in_default_app(path: Path) -> None:
@@ -44,8 +46,10 @@ class Dashboard:
     """Everything a request handler needs: where the data is and the session token."""
 
     def __init__(self, root: Path, *, token: str | None = None, today: Callable[[], date] = date.today,
-                 opener: Callable[[Path], None] = open_in_default_app) -> None:
+                 opener: Callable[[Path], None] = open_in_default_app, ollama: notes.Ollama | None = None) -> None:
         self.root = root
+        self.ollama = ollama or notes.Ollama()
+        self.batch: notes.BatchProgress | None = None
         self.db_path = root / "data" / "moodle.sqlite3"
         self.token = token or secrets.token_urlsafe(24)
         self.today = today
@@ -78,6 +82,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         if url.path in ("/", "/index.html"):
             return self._index()
+        if url.path == "/api/ping":  # lets the Dock app tell if the dashboard is already running
+            return self._json({"app": "study-desk"})
         if not self._token_ok(url):
             return self._send_error(HTTPStatus.FORBIDDEN, "Missing or wrong token")
         parts = [p for p in url.path.split("/") if p]
@@ -85,6 +91,21 @@ class DashboardHandler(BaseHTTPRequestHandler):
         with closing(self.app.connect()) as conn:
             if parts == ["api", "overview"]:
                 return self._json(queries.overview(conn, self.app.today()))
+            if parts == ["api", "ai"]:
+                status = self.app.ollama.status()
+                status["waiting"] = len(notes.files_needing_notes(conn))
+                status["batch"] = self.app.batch.as_dict() if self.app.batch else None
+                return self._json(status)
+            if parts == ["api", "cards"]:
+                module = query.get("module", [""])[0]
+                today = self.app.today()
+                return self._json({"cards": cards.due_cards(conn, today, module_id=int(module) if module.isdigit() else None),
+                                   "totals": cards.card_totals(conn, today)})
+            if len(parts) == 3 and parts[:2] == ["api", "claude-prompt"] and parts[2].isdigit():
+                try:
+                    return self._json({"prompt": notes.claude_prompt(conn, int(parts[2]))})
+                except notes.NotesError as exc:
+                    return self._send_error(HTTPStatus.BAD_REQUEST, str(exc))
             if parts == ["api", "search"]:
                 return self._json(queries.search_results(conn, query.get("q", [""])[0]))
             if len(parts) == 3 and parts[:2] == ["api", "module"] and parts[2].isdigit():
@@ -102,6 +123,25 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if not self._token_ok(url):
             return self._send_error(HTTPStatus.FORBIDDEN, "Missing or wrong token")
         parts = [p for p in url.path.split("/") if p]
+        if parts == ["api", "notes", "all"]:
+            if self.app.batch is None or not self.app.batch.running:
+                self.app.batch = notes.run_in_background(self.app.connect, self.app.ollama)
+            return self._json(self.app.batch.as_dict())
+        if parts == ["api", "notes", "stop"]:
+            if self.app.batch:
+                self.app.batch.stop.set()
+            return self._json({"stopping": True})
+        if len(parts) == 4 and parts[:2] == ["api", "notes"] and parts[2].isdigit() and parts[3] in ("ollama", "claude"):
+            return self._make_notes(int(parts[2]), parts[3])
+        if len(parts) == 4 and parts[:2] == ["api", "cards"] and parts[2].isdigit() and parts[3] == "review":
+            body = self._body()
+            with closing(self.app.connect()) as conn:
+                try:
+                    return self._json(cards.record_review(conn, int(parts[2]), str(body.get("grade")), self.app.today()))
+                except KeyError:
+                    return self._send_error(HTTPStatus.NOT_FOUND, "No such card")
+                except ValueError as exc:
+                    return self._send_error(HTTPStatus.BAD_REQUEST, str(exc))
         if len(parts) == 3 and parts[:2] == ["api", "open"] and parts[2].isdigit():
             with closing(self.app.connect()) as conn:
                 path = self._local_file(conn, int(parts[2]))
@@ -110,6 +150,28 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.app.opener(path)
             return self._json({"opened": True})
         self._send_error(HTTPStatus.NOT_FOUND, "Not found")
+
+    def _make_notes(self, resource_id: int, route: str) -> None:
+        body = self._body() if route == "claude" else {}
+        with closing(self.app.connect()) as conn:
+            try:
+                if route == "ollama":
+                    notes.make_notes_for(conn, resource_id, self.app.ollama)
+                else:
+                    notes.save_notes(conn, resource_id, notes.parse_reply(str(body.get("reply", ""))), self.app.today())
+            except notes.NotesError as exc:
+                return self._send_error(HTTPStatus.BAD_REQUEST, str(exc))
+            return self._json(notes.get_notes(conn, resource_id))
+
+    def _body(self) -> dict:
+        length = int(self.headers.get("Content-Length") or 0)
+        if not 0 < length <= MAX_BODY:
+            return {}
+        try:
+            data = json.loads(self.rfile.read(length))
+        except ValueError:
+            return {}
+        return data if isinstance(data, dict) else {}
 
     # --- checks ------------------------------------------------------------------------
 

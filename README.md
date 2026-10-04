@@ -60,6 +60,17 @@ Opens a page in your browser, built from your synced files:
 
 It runs only on your computer (127.0.0.1) and needs no internet. Press Ctrl+C in Terminal to close it. The sync keeps the search index up to date; files are read again only when they change.
 
+## Study notes and flashcards (free)
+
+Each file's page in the Study desk can give you a summary, key points and flashcards, in two free ways:
+
+- **Summarise on this Mac** uses [Ollama](https://ollama.com), a free app that runs an AI model on your own computer. Nothing is sent anywhere. One-off setup: install Ollama, open it, then run `ollama pull gemma3:4b` (a 3.3 GB download). To do every file at once, use **Revise flashcards → Make notes for all files**, or `python3 scripts/summarise.py`.
+- **Copy for Claude** copies the file's text with a ready-made request. Paste it into Claude, then paste Claude's reply back into the box and press **Save notes**.
+
+Notes are made once per version of a file; if a lecturer replaces the file, its notes are marked out of date.
+
+**Revise flashcards** shows the cards due today, one at a time: press space to see the answer, then 1 (again), 2 (hard), 3 (good) or 4 (easy). Cards you know come back after longer and longer gaps; ones you forget come back sooner.
+
 ## Where things live
 
 | Path | Contents | In Git? |
@@ -90,6 +101,6 @@ Tests use a fake Moodle and never go online. Code is in `student_os/`:
 | `moodle/storage.py` | Atomic writes, hashing, `versions/` |
 | `moodle/sync.py` | Orchestration per module |
 | `moodle/cli.py` | Command line and reports |
-| `library/` | Text extraction, outlines, dates, full-text search |
+| `library/` | Text extraction, outlines, dates, full-text search, notes (Ollama / Claude), flashcard scheduling |
 | `dashboard/` | Local web server and the study desk page |
 | `db.py` | SQLite schema, records and history |

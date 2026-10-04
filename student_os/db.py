@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 from .moodle.storage import INCOMING, VERSIONS, resolve_local, sha256_file
 from .moodle.urls import cmid, resource_key
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Resource.status values
 PENDING = "pending"          # seen, no successful download yet (retried every run)
@@ -132,6 +132,39 @@ CREATE INDEX date_mentions_on ON date_mentions(on_date);
 """
 
 
+_SCHEMA_V3 = """
+-- Study notes: a summary and key points per file, from a local AI model or pasted from Claude.
+CREATE TABLE ai_notes (
+    resource_id  INTEGER PRIMARY KEY REFERENCES resources(id),
+    content_hash TEXT NOT NULL,             -- the file version the notes describe
+    source       TEXT NOT NULL,             -- ollama | claude
+    model        TEXT,
+    summary      TEXT NOT NULL,
+    key_points   TEXT NOT NULL DEFAULT '[]', -- JSON list of strings
+    truncated    INTEGER NOT NULL DEFAULT 0, -- only the start of a long file was used
+    created_at   TEXT NOT NULL
+);
+
+-- Flashcards with their spaced-repetition schedule (see student_os.library.srs).
+CREATE TABLE flashcards (
+    id               INTEGER PRIMARY KEY,
+    resource_id      INTEGER NOT NULL REFERENCES resources(id),
+    question         TEXT NOT NULL,
+    answer           TEXT NOT NULL,
+    source           TEXT NOT NULL,
+    created_at       TEXT NOT NULL,
+    due_on           TEXT NOT NULL,         -- YYYY-MM-DD
+    interval_days    REAL NOT NULL DEFAULT 0,
+    ease             REAL NOT NULL DEFAULT 2.5,
+    reps             INTEGER NOT NULL DEFAULT 0,
+    lapses           INTEGER NOT NULL DEFAULT 0,
+    last_reviewed_at TEXT
+);
+CREATE INDEX flashcards_due ON flashcards(due_on);
+CREATE INDEX flashcards_resource ON flashcards(resource_id);
+"""
+
+
 def migrate(conn: sqlite3.Connection) -> None:
     """Apply schema changes using ``PRAGMA user_version``."""
     version = conn.execute("PRAGMA user_version").fetchone()[0]
@@ -145,6 +178,10 @@ def migrate(conn: sqlite3.Connection) -> None:
         with conn:
             conn.executescript(_SCHEMA_V2)
             conn.execute("PRAGMA user_version = 2")
+    if version < 3:
+        with conn:
+            conn.executescript(_SCHEMA_V3)
+            conn.execute("PRAGMA user_version = 3")
 
 
 def utc_now() -> str:

@@ -9,7 +9,9 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import PurePosixPath
 
 from .. import db
+from ..library.cards import due_count
 from ..library.index import dates_between, search
+from ..library.notes import get_notes
 
 NEW_DAYS = 7
 FEED_DAYS = 14
@@ -53,7 +55,7 @@ def overview(conn: sqlite3.Connection, today: date) -> dict:
         modules.append({"id": m["id"], "name": short, "code": code, "full_name": m["name"],
                         "files": m["files"], "recent": m["recent"] or 0})
     return {"today": today.isoformat(), "modules": modules, "coming_up": coming_up(conn, today),
-            "feed": feed(conn)}
+            "feed": feed(conn), "cards_due": due_count(conn, today)}
 
 
 def coming_up(conn: sqlite3.Connection, today: date, days: int = AHEAD_DAYS) -> list[dict]:
@@ -141,6 +143,8 @@ def resource_detail(conn: sqlite3.Connection, resource_id: int, today: date) -> 
         "dates": [{"date": d["on_date"], "kind": d["kind"], "page": d["page"], "snippet": d["snippet"],
                    "upcoming": d["on_date"] >= today.isoformat()} for d in dates],
         "versions": [{"at": v["created_at"], "path": v["archived_path"]} for v in versions],
+        "notes": get_notes(conn, resource_id),
+        "readable": bool(r["page_count"]) and not r["read_error"],
     }
 
 

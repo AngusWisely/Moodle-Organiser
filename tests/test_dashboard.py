@@ -12,6 +12,7 @@ from student_os import db
 from student_os.dashboard import queries
 from student_os.dashboard.server import Dashboard
 from student_os.library.index import index_library
+from student_os.library.notes import Ollama
 from tests.documents import make_docx, make_pdf
 
 TODAY = date(2026, 10, 4)
@@ -109,7 +110,11 @@ def test_search_results_carry_page_and_kind(project):
 def server(project):
     _, root, ids = project
     opened = []
-    app = Dashboard(root, token="secret-token", today=lambda: TODAY, opener=opened.append)
+    reply = {"summary": "Moist air basics.", "key_points": ["Dew point"],
+             "flashcards": [{"question": "What is the dew point?", "answer": "Where condensation starts"}]}
+    ollama = Ollama(get=lambda url, t: {"models": [{"name": "gemma3:4b"}]},
+                    post=lambda url, payload, t: {"message": {"content": json.dumps(reply)}})
+    app = Dashboard(root, token="secret-token", today=lambda: TODAY, opener=opened.append, ollama=ollama)
     httpd = app.make_server(0)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield httpd.server_address[1], ids, opened, root
@@ -117,12 +122,15 @@ def server(project):
     httpd.server_close()
 
 
-def request(port, path, *, method="GET", token="secret-token", host=None):
-    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+def request(port, path, *, method="GET", token="secret-token", host=None, body=None):
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
     headers = {"Host": host or f"127.0.0.1:{port}"}
     if token:
         headers["X-Token"] = token
-    conn.request(method, path, headers=headers)
+    payload = json.dumps(body).encode() if body is not None else None
+    if payload:
+        headers["Content-Type"] = "application/json"
+    conn.request(method, path, body=payload, headers=headers)
     response = conn.getresponse()
     body = response.read()
     conn.close()
@@ -177,3 +185,65 @@ def test_open_in_default_app_is_post_only(server):
     status, _, body = request(port, f"/api/open/{ids['brief']}", method="POST")
     assert status == 200 and json.loads(body) == {"opened": True}
     assert [p.name for p in opened] == ["brief.docx"]
+
+
+CLAUDE_REPLY = "SUMMARY:\nA coursework brief.\n\nKEY POINTS:\n- Due 14 November\n\nFLASHCARDS:\nQ: When is it due?\nA: 14 November 2026"
+
+
+def test_ping_needs_no_token(server):
+    port, *_ = server
+    status, _, body = request(port, "/api/ping", token=None)
+    assert status == 200 and json.loads(body) == {"app": "study-desk"}
+
+
+def test_notes_from_this_mac(server, monkeypatch):
+    port, ids, *_ = server
+    import student_os.library.notes as notes_module
+    monkeypatch.setattr(notes_module, "MAX_CHARS_LOCAL", 10_000)
+    monkeypatch.setattr(notes_module, "document_text", lambda conn, rid, mx: ("words " * 60, False))
+    status, _, body = request(port, f"/api/notes/{ids['notes']}/ollama", method="POST")
+    assert status == 200 and json.loads(body)["summary"] == "Moist air basics."
+    detail = json.loads(request(port, f"/api/resource/{ids['notes']}")[2])
+    assert detail["notes"]["flashcards"][0]["question"] == "What is the dew point?"
+
+
+def test_copy_for_claude_and_paste_back(server):
+    port, ids, *_ = server
+    prompt = json.loads(request(port, f"/api/claude-prompt/{ids['brief']}")[2])["prompt"]
+    assert "FLASHCARDS:" in prompt and "14 November 2026" in prompt
+    assert request(port, f"/api/notes/{ids['brief']}/claude", method="POST", body={"reply": "nonsense"})[0] == 400
+    status, _, body = request(port, f"/api/notes/{ids['brief']}/claude", method="POST", body={"reply": CLAUDE_REPLY})
+    assert status == 200 and json.loads(body)["source"] == "claude"
+    assert request(port, f"/api/claude-prompt/{ids['assign']}")[0] == 400  # a link has no text
+
+
+def test_revising_cards(server):
+    port, ids, *_ = server
+    request(port, f"/api/notes/{ids['brief']}/claude", method="POST", body={"reply": CLAUDE_REPLY})
+    data = json.loads(request(port, "/api/cards")[2])
+    [card] = data["cards"]
+    assert card["question"] == "When is it due?" and data["totals"][0]["due"] == 1
+    assert json.loads(request(port, "/api/overview")[2])["cards_due"] == 1
+    status, _, body = request(port, f"/api/cards/{card['id']}/review", method="POST", body={"grade": "good"})
+    assert status == 200 and json.loads(body)["due_on"] == "2026-10-05"
+    assert json.loads(request(port, "/api/cards")[2])["cards"] == []
+    assert request(port, f"/api/cards/{card['id']}/review", method="POST", body={"grade": "meh"})[0] == 400
+    assert request(port, "/api/cards/999/review", method="POST", body={"grade": "good"})[0] == 404
+
+
+def test_notes_for_all_files_in_background(server, monkeypatch):
+    port, ids, *_ = server
+    import time
+    import student_os.library.notes as notes_module
+    monkeypatch.setattr(notes_module, "document_text", lambda conn, rid, mx: ("words " * 60, False))
+    monkeypatch.setattr(notes_module, "MIN_WORDS", 1)  # the fixture files are tiny
+    before = json.loads(request(port, "/api/ai")[2])
+    assert before["running"] and before["model"] == "gemma3:4b" and before["waiting"] == 2  # removed file excluded
+    request(port, "/api/notes/all", method="POST")
+    for _ in range(50):
+        batch = json.loads(request(port, "/api/ai")[2])["batch"]
+        if not batch["running"]:
+            break
+        time.sleep(0.05)
+    assert (batch["total"], batch["done"], batch["errors"]) == (2, 2, [])
+    assert json.loads(request(port, "/api/ai")[2])["waiting"] == 0
