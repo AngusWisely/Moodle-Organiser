@@ -433,4 +433,3 @@ def export_index_csv(conn: sqlite3.Connection, path: Path) -> int:
         writer.writerows(dict(r) for r in rows)
     temp.replace(path)
     return len(rows)
-
