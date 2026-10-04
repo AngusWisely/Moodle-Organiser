@@ -6,638 +6,257 @@
 <meta name="token" content="{{TOKEN}}">
 <title>Study desk</title>
 <style>
-:root {
-  --paper: #F3F5F2;
-  --sheet: #FBFCFA;
-  --ink: #1E2A3A;
-  --graphite: #5B6B78;
-  --rule: #CBD5D1;
-  --rule-soft: #E2E8E5;
-  --teal: #0F7B6C;
-  --teal-wash: #E1F0EC;
-  --amber: #B9781A;
-  --amber-wash: #F6ECDA;
-  --brick: #A9433A;
-  --brick-wash: #F5E3E0;
-  --mark: #FBE7A8;
-  --sans: "Avenir Next", Avenir, "Segoe UI", system-ui, sans-serif;
-  --serif: Charter, "Bitstream Charter", "Iowan Old Style", Georgia, serif;
-  color-scheme: light;
+:root{
+  --bg:#f6f7f5;--panel:#fff;--text:#1f2933;--muted:#6b7280;--line:#e5e7eb;
+  --accent:#136f63;--accent-soft:#e8f3f0;--warn:#a36518;--warn-soft:#f7efe3;
+  --danger:#a8453c;--danger-soft:#f7e8e6;--radius:12px;
+  --sans:"Avenir Next",Avenir,"Segoe UI",system-ui,sans-serif;
+  --serif:Charter,"Iowan Old Style",Georgia,serif;
+  color-scheme:light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #131A20; --sheet: #182129; --ink: #E4EAE8; --graphite: #9AA8B2; --rule: #2E3B45;
-    --rule-soft: #22303A; --teal: #4CC3AE; --teal-wash: #173A35; --amber: #E3A64A; --amber-wash: #3A2D17;
-    --brick: #E07C70; --brick-wash: #3D2321; --mark: #5A4A14; color-scheme: dark;
-  }
+@media(prefers-color-scheme:dark){
+  :root{--bg:#12181d;--panel:#192127;--text:#e6ece9;--muted:#9ba8b0;--line:#2a343c;
+    --accent:#58c7b5;--accent-soft:#173a35;--warn:#e0a14c;--warn-soft:#3a2c17;
+    --danger:#e37d72;--danger-soft:#3b2422;color-scheme:dark}
 }
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-html, body { margin: 0; }
-body { background: var(--paper); color: var(--ink); font: 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
-a { color: inherit; }
-button { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 3px; }
-
-/* frame */
-.frame { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 100vh; }
-.side { border-right: 1px solid var(--rule); padding: 22px 18px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-.brand { font-weight: 600; font-size: 17px; letter-spacing: .01em; margin: 0 0 22px 6px; display: flex; gap: 10px; align-items: center; }
-.brand svg { flex: none; }
-.nav { list-style: none; margin: 0; padding: 0; }
-.nav a { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: baseline; padding: 8px 10px; border-radius: 6px; text-decoration: none; }
-.nav a:hover { background: var(--rule-soft); }
-.nav a[aria-current="page"] { background: var(--teal-wash); color: var(--ink); }
-.nav .name { font-weight: 500; }
-.nav .code { display: block; font-size: 12px; color: var(--graphite); font-variant-numeric: tabular-nums; }
-.nav .count { font-size: 12px; color: var(--graphite); font-variant-numeric: tabular-nums; }
-.nav .fresh { color: var(--teal); font-weight: 600; }
-.nav-gap { height: 18px; }
-.side-note { font-size: 12px; color: var(--graphite); margin: 26px 10px 0; }
-
-.main { padding: 22px clamp(18px, 4vw, 48px) 60px; }
-.search { display: flex; gap: 10px; align-items: center; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 0 14px; max-width: 760px; }
-.search:focus-within { border-color: var(--teal); }
-.search input { flex: 1; border: 0; background: transparent; font: inherit; font-size: 16px; color: var(--ink); padding: 12px 0; outline: none; }
-.search svg { color: var(--graphite); flex: none; }
-.view { margin-top: 30px; }
-h1 { font-size: 28px; line-height: 1.2; font-weight: 600; margin: 0 0 4px; letter-spacing: -.01em; }
-h2 { font-size: 17px; font-weight: 600; margin: 0 0 14px; }
-.sub { color: var(--graphite); margin: 0 0 26px; }
-.sub a { color: var(--teal); }
-.muted { color: var(--graphite); }
-.empty { color: var(--graphite); font-family: var(--serif); font-size: 16px; padding: 18px 0; max-width: 46ch; }
-
-/* home */
-.home { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
-
-/* the scale bar: weeks as ticks on a vertical ruler */
-.ruler { position: relative; padding-left: 26px; }
-.ruler::before { content: ""; position: absolute; left: 7px; top: 6px; bottom: 6px; width: 2px; background: var(--ink); opacity: .85; }
-.week { position: relative; padding-bottom: 14px; }
-.week-label { position: relative; font-size: 13px; color: var(--graphite); font-variant-numeric: tabular-nums; margin: 0 0 8px; }
-.week-label::before { content: ""; position: absolute; left: -26px; top: 9px; width: 16px; height: 2px; background: var(--ink); }
-.week-label b { color: var(--ink); font-weight: 600; }
-.pin { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: start; margin: 0 0 10px; text-decoration: none; padding: 10px 12px 10px 0; border-radius: 8px; }
-.pin:hover { background: var(--sheet); }
-.pin .day { text-align: center; border-right: 3px solid var(--amber); padding-right: 8px; }
-.pin.exam .day { border-color: var(--brick); }
-.pin .day b { display: block; font-size: 24px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
-.pin .day span { display: block; font-size: 12px; color: var(--graphite); }
-.pin .day .away { color: var(--ink); font-weight: 500; }
-.pin .what { font-weight: 500; }
-.pin .tag { font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 99px; background: var(--amber-wash); color: var(--amber); margin-right: 6px; }
-.pin.exam .tag { background: var(--brick-wash); color: var(--brick); }
-.pin .where { font-size: 13px; color: var(--graphite); }
-.pin .quote { font-family: var(--serif); font-size: 14px; margin-top: 3px; color: var(--ink); opacity: .85; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.away { font-size: 12px; color: var(--graphite); white-space: nowrap; }
-
-.day-group { margin: 0 0 22px; }
-.day-group h3 { font-size: 13px; font-weight: 600; color: var(--graphite); margin: 0 0 6px; }
-.row { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 8px 10px; border-radius: 6px; text-decoration: none; border-bottom: 1px solid var(--rule-soft); }
-.row:hover { background: var(--sheet); }
-.row .title { font-weight: 500; overflow-wrap: anywhere; }
-.row .where { display: block; font-size: 13px; color: var(--graphite); }
-.row .where.inline { display: inline; }
-.kind { font-size: 11px; font-weight: 600; text-align: center; padding: 1px 0; border-radius: 4px; background: var(--rule-soft); color: var(--graphite); }
-.kind.pdf { background: var(--brick-wash); color: var(--brick); }
-.kind.pptx, .kind.ppt { background: var(--amber-wash); color: var(--amber); }
-.kind.docx, .kind.doc { background: var(--teal-wash); color: var(--teal); }
-.badge { font-size: 12px; font-weight: 600; color: var(--teal); }
-.badge.updated { color: var(--amber); }
-.badge.removed { color: var(--graphite); text-decoration: line-through; }
-.more { background: none; border: 0; color: var(--teal); padding: 6px 10px; cursor: pointer; font-weight: 500; }
-
-/* module */
-.section { margin: 0 0 30px; max-width: 900px; }
-.section h2 { padding-bottom: 6px; border-bottom: 2px solid var(--ink); display: flex; justify-content: space-between; gap: 12px; }
-.section h2 span { font-weight: 400; font-size: 13px; color: var(--graphite); }
-
-/* file */
-.crumbs { font-size: 13px; color: var(--graphite); margin: 0 0 6px; }
-.crumbs a { color: var(--graphite); }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 30px; }
-.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--rule); background: var(--sheet); padding: 8px 14px; border-radius: 8px; cursor: pointer; text-decoration: none; font-weight: 500; }
-.btn:hover { border-color: var(--teal); }
-.btn.primary { background: var(--teal); border-color: var(--teal); color: #fff; }
-@media (prefers-color-scheme: dark) { .btn.primary { color: #0D1A17; } }
-.file-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: clamp(24px, 4vw, 56px); align-items: start; max-width: 1100px; }
-.toc { list-style: none; padding: 0; margin: 0; font-family: var(--serif); font-size: 16px; max-width: 34em; }
-.toc li { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: baseline; }
-.toc a, .toc span.t { padding: 5px 0; text-decoration: none; }
-.toc a:hover { color: var(--teal); }
-.toc li::after { content: none; }
-.toc .p { font-family: var(--sans); font-size: 12px; color: var(--graphite); font-variant-numeric: tabular-nums; }
-.facts { font-size: 13px; color: var(--graphite); margin: 0 0 22px; }
-.date-item { padding: 10px 0; border-bottom: 1px solid var(--rule-soft); }
-.date-item .when { font-weight: 600; font-variant-numeric: tabular-nums; }
-.date-item .quote { font-family: var(--serif); font-size: 14px; }
-.date-item.past { opacity: .55; }
-.kindword { font-size: 12px; font-weight: 600; margin-left: 6px; }
-.kindword.deadline { color: var(--amber); }
-.kindword.exam { color: var(--brick); }
-
-/* search */
-.hit { display: block; padding: 12px 10px; border-bottom: 1px solid var(--rule-soft); text-decoration: none; max-width: 860px; border-radius: 6px; }
-.hit:hover { background: var(--sheet); }
-.hit .title { font-weight: 600; }
-.hit .where { font-size: 13px; color: var(--graphite); }
-.hit .snip { font-family: var(--serif); font-size: 15px; margin-top: 4px; }
-mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1px; }
-
-/* study notes */
-.notes { max-width: 1100px; margin: 0 0 34px; padding: 20px 22px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; }
-.notes h2 { margin-bottom: 10px; }
-.notes .summary { font-family: var(--serif); font-size: 17px; line-height: 1.55; max-width: 62ch; margin: 0 0 14px; }
-.notes ul { margin: 0 0 14px; padding-left: 20px; font-family: var(--serif); font-size: 15px; max-width: 70ch; }
-.notes li { margin: 0 0 4px; }
-.notes .byline { font-size: 13px; color: var(--graphite); margin: 0; }
-.notes .row-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
-.notes textarea { width: 100%; min-height: 160px; font: 14px/1.45 var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 10px; margin: 10px 0; }
-.notes .help { font-size: 14px; color: var(--graphite); max-width: 62ch; }
-.notes code { font-size: 13px; background: var(--rule-soft); padding: 1px 5px; border-radius: 4px; }
-.notes .warn { color: var(--amber); font-size: 14px; }
-.btn[disabled] { opacity: .5; cursor: progress; }
-
-/* revise */
-.deck { max-width: 680px; }
-.progress { font-size: 13px; color: var(--graphite); margin: 0 0 14px; font-variant-numeric: tabular-nums; }
-.card { background: var(--sheet); border: 1px solid var(--rule); border-left: 4px solid var(--teal); border-radius: 12px; padding: 26px 28px; min-height: 220px; }
-.card .from { font-size: 13px; color: var(--graphite); margin: 0 0 14px; }
-.card .from a { color: var(--graphite); }
-.card .q { font-family: var(--serif); font-size: 22px; line-height: 1.4; margin: 0; }
-.card .a { font-family: var(--serif); font-size: 18px; line-height: 1.5; margin: 18px 0 0; padding-top: 16px; border-top: 1px dashed var(--rule); }
-.grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
-.grades .btn { justify-content: center; flex-direction: column; gap: 0; }
-.grades .btn small { font-weight: 400; font-size: 12px; color: var(--graphite); }
-.grades .again:hover { border-color: var(--brick); }
-.keys { font-size: 12px; color: var(--graphite); margin-top: 12px; }
-.totals { margin-top: 30px; max-width: 680px; }
-.totals .row { grid-template-columns: minmax(0, 1fr) auto auto; }
-.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 9px 16px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
-.toast.show { opacity: 1; }
-
-@media (max-width: 860px) {
-  .frame { grid-template-columns: 1fr; }
-  .side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 14px 16px; }
-  .nav { display: flex; gap: 6px; overflow-x: auto; }
-  .nav li { flex: none; }
-  .nav .count, .nav-gap, .side-note { display: none; }
-  .brand { margin-bottom: 10px; }
-  .home, .file-grid { grid-template-columns: 1fr; }
-  .main { padding: 18px 16px 48px; }
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0}body{background:var(--bg);color:var(--text);font:15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}.frame{display:grid;grid-template-columns:210px minmax(0,1fr);min-height:100vh}
+.side{border-right:1px solid var(--line);padding:24px 16px;position:sticky;top:0;height:100vh}
+.brand{font-size:18px;font-weight:650;margin:0 0 28px 10px}.brand small{display:block;color:var(--muted);font-size:12px;font-weight:500;margin-top:2px}
+.nav{list-style:none;margin:0;padding:0;display:grid;gap:5px}.nav a{display:flex;justify-content:space-between;gap:8px;padding:10px 12px;border-radius:9px;text-decoration:none;font-weight:550}
+.nav a:hover{background:var(--panel)}.nav a[aria-current="page"]{background:var(--accent-soft)}
+.nav .count{font-size:12px;color:var(--muted);font-weight:600}.nav .fresh{color:var(--accent)}
+.side-note{font-size:12px;color:var(--muted);margin:28px 12px 0}
+.main{padding:34px clamp(18px,5vw,64px) 70px;max-width:1220px;width:100%}
+.view{max-width:980px}h1{font-size:30px;line-height:1.2;margin:0 0 6px;letter-spacing:-.02em}h2{font-size:16px;margin:0 0 12px}
+.sub{margin:0 0 30px;color:var(--muted)}.muted{color:var(--muted)}.empty{color:var(--muted);font-family:var(--serif);font-size:16px;padding:14px 0}
+.section-block{margin:0 0 34px}.section-title{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+.section-title a{font-size:13px;color:var(--accent);text-decoration:none}
+.list{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line);text-decoration:none}
+.item:last-child{border-bottom:0}.item:hover{background:var(--accent-soft)}.item-title{font-weight:600}.meta{font-size:13px;color:var(--muted);margin-top:2px}
+.badge{font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap}.badge.updated{color:var(--warn)}.badge.due{color:var(--danger)}
+.primary-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:12px}
+.primary-card h3{font-size:16px;margin:0 0 4px}.primary-card p{margin:0;color:var(--muted)}
+.attention{display:grid;gap:10px}.attention a{text-decoration:none}.attention .primary-card:hover{border-color:var(--accent)}
+.modules-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.module-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;text-decoration:none}
+.module-card:hover{border-color:var(--accent)}.module-card h3{margin:0 0 4px;font-size:16px}.module-card .code{font-size:12px;color:var(--muted);margin-bottom:12px}
+.module-card .stats{font-size:13px;color:var(--muted)}.module-card .new{color:var(--accent);font-weight:700}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 28px}.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--panel);padding:9px 14px;border-radius:9px;text-decoration:none;font-weight:600}
+.btn:hover{border-color:var(--accent)}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn[disabled]{opacity:.5;cursor:progress}
+.crumbs{font-size:13px;color:var(--muted);margin:0 0 8px}.crumbs a{color:var(--muted)}
+.module-section{margin:0 0 28px}.module-section h2{padding-bottom:7px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
+.module-section h2 span{font-weight:400;color:var(--muted);font-size:12px}
+.file-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 8px;border-bottom:1px solid var(--line);text-decoration:none}
+.file-row:hover{background:var(--panel)}.kind{font-size:10px;font-weight:700;text-transform:uppercase;text-align:center;padding:3px 4px;border-radius:5px;background:var(--line);color:var(--muted)}
+.kind.pdf{background:var(--danger-soft);color:var(--danger)}.kind.pptx,.kind.ppt{background:var(--warn-soft);color:var(--warn)}.kind.docx,.kind.doc{background:var(--accent-soft);color:var(--accent)}
+.file-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:40px;align-items:start}
+.toc{list-style:none;margin:0;padding:0}.toc li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;border-bottom:1px solid var(--line)}
+.toc a,.toc .t{padding:7px 0;text-decoration:none}.toc .p{padding:7px 0;color:var(--muted);font-size:12px}
+.date-item{padding:10px 0;border-bottom:1px solid var(--line)}.date-item.past{opacity:.5}.date-item .when{font-weight:650}.date-item .quote{font-family:var(--serif);font-size:14px;margin-top:3px}
+.notes{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin:0 0 30px}.notes .summary{font-family:var(--serif);font-size:17px;max-width:64ch}.notes ul{font-family:var(--serif);padding-left:20px}.notes .byline,.help{font-size:13px;color:var(--muted)}
+.notes textarea{width:100%;min-height:150px;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:10px;margin:10px 0}
+.warn{color:var(--warn)}.row-actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-top:12px}
+.search-box{display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0 14px;max-width:720px}
+.search-box input{flex:1;border:0;background:transparent;padding:12px 0;outline:none;font-size:16px}
+.hit{display:block;padding:13px 10px;border-bottom:1px solid var(--line);text-decoration:none}.hit:hover{background:var(--panel)}.hit .title{font-weight:650}.hit .where{font-size:13px;color:var(--muted)}.hit .snip{font-family:var(--serif);margin-top:4px}
+mark{background:#f7dfa0;color:inherit}.deck{max-width:680px}.progress{font-size:13px;color:var(--muted)}.card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:var(--radius);padding:26px;min-height:220px}
+.card .from{font-size:13px;color:var(--muted)}.card .q{font-family:var(--serif);font-size:22px}.card .a{font-family:var(--serif);font-size:18px;border-top:1px dashed var(--line);padding-top:16px;margin-top:18px}
+.grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}.grades .btn{flex-direction:column}.grades small{font-weight:400;color:var(--muted);font-size:11px}
+.keys{font-size:12px;color:var(--muted)}.totals{margin-top:28px;max-width:680px}.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 15px;border-radius:8px;opacity:0;transition:.2s;pointer-events:none}.toast.show{opacity:1}
+.more-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.tool-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}.tool-card h2{margin-bottom:8px}.tool-card p{margin:0 0 12px;color:var(--muted)}
+@media(max-width:760px){
+  .frame{display:block;padding-bottom:72px}.side{position:fixed;z-index:20;left:0;right:0;bottom:0;top:auto;height:auto;background:var(--panel);border:0;border-top:1px solid var(--line);padding:7px 8px}
+  .brand,.side-note{display:none}.nav{grid-template-columns:repeat(4,1fr);gap:2px}.nav a{display:block;text-align:center;padding:8px 4px;font-size:12px}.nav .count{display:block;font-size:10px;margin-top:1px}
+  .main{padding:22px 16px 36px}.modules-grid,.more-grid,.file-grid{grid-template-columns:1fr}.grades{grid-template-columns:repeat(2,1fr)}h1{font-size:26px}
 }
-@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 </style>
 </head>
 <body>
 <div class="frame">
   <aside class="side">
-    <p class="brand">
-      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 16 C8 15 10 12 12 9 S16 5 18 5" fill="none" stroke="var(--teal)" stroke-width="2"/><path d="M5 12h12M5 8h12" stroke="currentColor" stroke-width="1" opacity=".35"/></svg>
-      Study desk
-    </p>
+    <p class="brand">Study desk<small>Your university, organised</small></p>
     <ul class="nav" id="nav"></ul>
-    <p class="side-note">Run the sync to fetch new files. Search, outlines and dates update after each sync.</p>
+    <p class="side-note">Home is your inbox. Modules hold everything. Revision shows what is due.</p>
   </aside>
-  <main class="main">
-    <form class="search" id="search-form" role="search">
-      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="7.5" cy="7.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 12l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <input id="q" type="search" placeholder="Search inside your lectures and notes" aria-label="Search inside your lectures and notes" autocomplete="off">
-    </form>
-    <div class="view" id="view" aria-live="polite"></div>
-  </main>
+  <main class="main"><div class="view" id="view" aria-live="polite"></div></main>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <script>
-const TOKEN = document.querySelector('meta[name="token"]').content;
-const view = document.getElementById("view");
-const nav = document.getElementById("nav");
-let overview = null;
+const TOKEN=document.querySelector('meta[name="token"]').content;
+const view=document.getElementById("view"),nav=document.getElementById("nav");let overview=null;
+const api=async(path,options={})=>{const r=await fetch(path,{...options,headers:{...(options.headers||{}),"X-Token":TOKEN}});if(!r.ok)throw new Error((await r.json()).error||r.statusText);return r.json()};
+const fileUrl=(id,page)=>`/files/${id}?t=${encodeURIComponent(TOKEN)}${page?`#page=${page}`:""}`;
+function h(tag,attrs={},...children){const el=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(v===null||v===undefined||v===false)continue;if(k==="class")el.className=v;else if(k.startsWith("on"))el.addEventListener(k.slice(2),v);else el.setAttribute(k,v===true?"":v)}for(const c of children.flat(Infinity)){if(c===null||c===undefined||c===false)continue;el.append(c instanceof Node?c:document.createTextNode(String(c)))}return el}
+const show=(...c)=>view.replaceChildren(...c.flat(Infinity).filter(Boolean));
+const toast=m=>{const e=document.getElementById("toast");e.textContent=m;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2200)};
+const parseDay=iso=>new Date(iso+"T12:00:00"),fmt=(d,o)=>d.toLocaleDateString("en-GB",o);
+const daysAway=(iso,today)=>{const n=Math.round((parseDay(iso)-parseDay(today))/86400000);return n===0?"Today":n===1?"Tomorrow":`In ${n} days`};
+const kindTag=kind=>h("span",{class:`kind ${kind}`},kind==="link"?"link":kind==="video"?"video":kind);
+const highlighted=text=>{const span=h("span");let mark=false;for(const p of String(text).split(/(\[\[|\]\])/)){if(p==="[["){mark=true;continue}if(p==="]]"){mark=false;continue}if(p)span.append(mark?h("mark",{},p):document.createTextNode(p))}return span};
 
-const api = async (path, options = {}) => {
-  const response = await fetch(path, { ...options, headers: { "X-Token": TOKEN } });
-  if (!response.ok) throw new Error((await response.json()).error || response.statusText);
-  return response.json();
-};
-const fileUrl = (id, page) => `/files/${id}?t=${encodeURIComponent(TOKEN)}${page ? `#page=${page}` : ""}`;
-
-function h(tag, attrs = {}, ...children) {
-  const el = document.createElement(tag);
-  for (const [key, value] of Object.entries(attrs)) {
-    if (value === null || value === undefined || value === false) continue;
-    if (key === "class") el.className = value;
-    else if (key.startsWith("on")) el.addEventListener(key.slice(2), value);
-    else el.setAttribute(key, value === true ? "" : value);
-  }
-  for (const child of children.flat()) {
-    if (child === null || child === undefined || child === false) continue;
-    el.append(child instanceof Node ? child : document.createTextNode(String(child)));
-  }
-  return el;
-}
-const highlighted = text => {
-  const span = h("span");
-  String(text).split(/(\[\[|\]\])/).reduce((inMark, part) => {
-    if (part === "[[") return true;
-    if (part === "]]") return false;
-    if (part) span.append(inMark ? h("mark", {}, part) : document.createTextNode(part));
-    return inMark;
-  }, false);
-  return span;
-};
-const fill = (el, ...children) => { el.append(...children.flat(Infinity).filter(c => c !== null && c !== undefined && c !== false)); return el; };
-const show = (...children) => view.replaceChildren(...children.flat(Infinity).filter(c => c !== null && c !== undefined && c !== false));
-const toast = message => {
-  const el = document.getElementById("toast");
-  el.textContent = message;
-  el.classList.add("show");
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => el.classList.remove("show"), 2200);
-};
-
-const DAY = 86400000;
-const parseDay = iso => new Date(iso + "T12:00:00");
-const fmt = (date, options) => date.toLocaleDateString("en-GB", options);
-function daysAway(iso, todayIso) {
-  const n = Math.round((parseDay(iso) - parseDay(todayIso)) / DAY);
-  return n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`;
-}
-function weekStart(iso) {
-  const d = parseDay(iso);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return d.toISOString().slice(0, 10);
-}
-function dayLabel(stamp) {
-  const d = new Date(stamp);
-  const today = new Date();
-  const diff = Math.round((new Date(today.toDateString()) - new Date(d.toDateString())) / DAY);
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Yesterday";
-  return fmt(d, { weekday: "long", day: "numeric", month: "long" });
-}
-const unitsFor = kind => kind === "pptx" ? "slides" : kind === "docx" ? "sections" : "pages";
-const kindTag = kind => h("span", { class: `kind ${kind}` }, kind === "link" ? "link" : kind === "video" ? "video" : kind);
-
-/* --- navigation ----------------------------------------------------------- */
-function renderNav(current) {
+function renderNav(current){
+  const due=overview?.cards_due||0;
   nav.replaceChildren(
-    h("li", {}, h("a", { href: "#/", "aria-current": current === "home" ? "page" : null },
-      h("span", { class: "name" }, "Overview"))),
-    h("li", {}, h("a", { href: "#/revise", "aria-current": current === "revise" ? "page" : null },
-      h("span", { class: "name" }, "Revise flashcards"),
-      h("span", { class: `count ${overview?.cards_due ? "fresh" : ""}` }, overview?.cards_due ? `${overview.cards_due} due` : ""))),
-    h("li", { class: "nav-gap", "aria-hidden": "true" }),
-    ...(overview?.modules || []).map(m => h("li", {},
-      h("a", { href: `#/module/${m.id}`, title: m.full_name, "aria-current": current === `module/${m.id}` ? "page" : null },
-        h("span", {}, h("span", { class: "name" }, m.name), m.code ? h("span", { class: "code" }, m.code) : null),
-        h("span", { class: `count ${m.recent ? "fresh" : ""}` }, m.recent ? `${m.recent} new` : m.files)))));
+    h("li",{},h("a",{href:"#/","aria-current":current==="home"?"page":null},"Home")),
+    h("li",{},h("a",{href:"#/modules","aria-current":current==="modules"?"page":null},"Modules")),
+    h("li",{},h("a",{href:"#/revise","aria-current":current==="revise"?"page":null},
+      h("span",{},"Revision"),h("span",{class:`count ${due?"fresh":""}`},due?`${due} due`:""))),
+    h("li",{},h("a",{href:"#/more","aria-current":current==="more"?"page":null},"More"))
+  );
 }
 
-/* --- views ---------------------------------------------------------------- */
-function renderHome() {
-  const { coming_up: items, feed, today } = overview;
-  const weeks = new Map();
-  for (const item of items) {
-    const key = weekStart(item.date);
-    if (!weeks.has(key)) weeks.set(key, []);
-    weeks.get(key).push(item);
-  }
-  const thisWeek = weekStart(today);
-  const ruler = items.length
-    ? h("div", { class: "ruler" }, [...weeks].map(([start, pins]) => h("div", { class: "week" },
-        h("p", { class: "week-label" }, start === thisWeek ? h("b", {}, "This week") : "Week of ",
-          start === thisWeek ? "" : fmt(parseDay(start), { day: "numeric", month: "long" })),
-        pins.map(pin => h("a", { class: `pin ${pin.kind}`, href: `#/file/${pin.resource_id}` },
-          h("div", { class: "day" }, h("b", {}, parseDay(pin.date).getDate()),
-            h("span", {}, fmt(parseDay(pin.date), { weekday: "short" })),
-            h("span", { class: "away" }, daysAway(pin.date, today))),
-          h("div", {},
-            h("div", {}, h("span", { class: "tag" }, pin.kind === "exam" ? "Exam" : "Deadline"),
-              h("span", { class: "what" }, pin.title)),
-            h("div", { class: "where" }, `${pin.module}, page ${pin.page}`),
-            h("div", { class: "quote" }, pin.snippet)))))))
-    : h("p", { class: "empty" }, "No deadlines or exams found in your files for the next four months. Dates appear here once a brief or handbook mentions them.");
+function greeting(){const n=new Date().getHours();return n<12?"Good morning":n<18?"Good afternoon":"Good evening"}
 
-  const groups = new Map();
-  for (const event of feed) {
-    const label = dayLabel(event.at);
-    if (!groups.has(label)) groups.set(label, []);
-    groups.get(label).push(event);
-  }
-  const feedEl = feed.length
-    ? h("div", {}, [...groups].map(([label, events]) => {
-        const group = h("section", { class: "day-group" }, h("h3", {}, label, h("span", { class: "muted" }, ` (${events.length})`)));
-        const shown = events.slice(0, 8);
-        const list = h("div", {}, shown.map(feedRow));
-        group.append(list);
-        if (events.length > shown.length) {
-          group.append(h("button", { class: "more", onclick: e => { list.replaceChildren(...events.map(feedRow)); e.target.remove(); } },
-            `Show all ${events.length}`));
-        }
-        return group;
-      }))
-    : h("p", { class: "empty" }, "Nothing new from Moodle in the last two weeks. Run the sync to check again.");
-
+function renderHome(){
+  const {today,coming_up,feed,cards_due}=overview;
+  const attention=[];
+  if(cards_due)attention.push(h("a",{href:"#/revise"},h("div",{class:"primary-card"},
+    h("h3",{},`${cards_due} flashcard${cards_due===1?"":"s"} due`),h("p",{},"A short review now will keep them spaced out."))));
+  for(const item of coming_up.slice(0,3))attention.push(h("a",{href:`#/file/${item.resource_id}`},h("div",{class:"primary-card"},
+    h("h3",{},item.kind==="exam"?`Exam — ${item.title}`:item.title),
+    h("p",{},`${daysAway(item.date,today)} · ${item.module} · ${fmt(parseDay(item.date),{day:"numeric",month:"short"})}`))));
+  const fresh=feed.filter(x=>x.event!=="removed").slice(0,6);
   show(
-    h("h1", {}, greeting()),
-    h("p", { class: "sub" }, fmt(parseDay(today), { weekday: "long", day: "numeric", month: "long" })),
-    h("div", { class: "home" },
-      h("section", {}, h("h2", {}, "Coming up"), ruler),
-      h("section", {}, h("h2", {}, "New and updated"), feedEl)));
+    h("h1",{},greeting()),
+    h("p",{class:"sub"},fmt(parseDay(today),{weekday:"long",day:"numeric",month:"long"})),
+    h("section",{class:"section-block"},
+      h("div",{class:"section-title"},h("h2",{},"Needs attention"),coming_up.length>3?h("a",{href:"#/more"},"See all"):null),
+      h("div",{class:"attention"},attention.length?attention:h("p",{class:"empty"},"Nothing urgent. You're clear for now."))),
+    h("section",{class:"section-block"},
+      h("div",{class:"section-title"},h("h2",{},"New"),fresh.length?h("span",{class:"muted"},`${fresh.length} recent`):null),
+      fresh.length?h("div",{class:"list"},fresh.map(feedRow)):h("p",{class:"empty"},"Nothing new from Moodle in the last two weeks.")))
 }
-function feedRow(event) {
-  return h("a", { class: "row", href: `#/file/${event.resource_id}` },
-    kindTag(event.kind),
-    h("span", {}, h("span", { class: "title" }, event.title),
-      h("span", { class: "where" }, `${event.module}${event.section ? ", " + event.section : ""}`)),
-    h("span", { class: `badge ${event.event}` }, event.event === "new" ? "New" : event.event === "updated" ? "Updated" : "Removed"));
-}
-function greeting() {
-  const hour = new Date().getHours();
-  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+function feedRow(event){return h("a",{class:"item",href:`#/file/${event.resource_id}`},
+  h("div",{},h("div",{class:"item-title"},event.title),h("div",{class:"meta"},`${event.module}${event.section?", "+event.section:""}`)),
+  h("span",{class:`badge ${event.event}`},event.event==="updated"?"Updated":"New"))}
+
+function renderModules(){
+  const modules=overview.modules||[];
+  show(h("h1",{},"Modules"),h("p",{class:"sub"},"Everything from Moodle, organised by module."),
+    modules.length?h("div",{class:"modules-grid"},modules.map(m=>h("a",{class:"module-card",href:`#/module/${m.id}`},
+      h("h3",{},m.name),m.code?h("div",{class:"code"},m.code):null,
+      h("div",{class:"stats"},`${m.files} file${m.files===1?"":"s"}`,m.recent?h("span",{class:"new"},` · ${m.recent} new`):""))))
+      :h("p",{class:"empty"},"No modules yet. Run a Moodle sync first."))
 }
 
-async function renderModule(id) {
-  const module = await api(`/api/module/${id}`);
-  show(
-    h("h1", {}, module.name),
-    h("p", { class: "sub" }, module.code ? `${module.code}. ` : "", h("a", { href: module.url, target: "_blank", rel: "noopener" }, "Open on Moodle")),
-    module.sections.length ? module.sections.map(section => h("section", { class: "section" },
-      h("h2", {}, section.name, h("span", {}, `${section.items.length} ${section.items.length === 1 ? "item" : "items"}`)),
-      section.items.map(item => {
-        const isLink = item.kind === "link" || item.kind === "video";
-        return h("a", isLink ? { class: "row", href: item.moodle_url, target: "_blank", rel: "noopener" }
-                             : { class: "row", href: `#/file/${item.id}` },
-          kindTag(item.kind),
-          h("span", {}, h("span", { class: "title" }, item.title),
-            item.pages ? h("span", { class: "where" }, `${item.pages} ${unitsFor(item.kind)}`) : null,
-            isLink ? h("span", { class: "where" }, item.type === "assign" ? "Assignment on Moodle" : item.kind === "video" ? "Video on Moodle" : "On Moodle") : null),
-          h("span", { class: `badge ${item.badge}` }, item.badge === "new" ? "New" : item.badge === "updated" ? "Updated" : ""));
-      }))) : h("p", { class: "empty" }, "No files from this module yet. Run the sync to fetch them."));
+async function renderModule(id){
+  const module=await api(`/api/module/${id}`);
+  show(h("p",{class:"crumbs"},h("a",{href:"#/modules"},"Modules")," / ",module.name),
+    h("h1",{},module.name),
+    h("p",{class:"sub"},module.code?`${module.code}. `:"",h("a",{href:module.url,target:"_blank",rel:"noopener"},"Open on Moodle")),
+    module.sections.length?module.sections.map(section=>h("section",{class:"module-section"},
+      h("h2",{},section.name,h("span",{},`${section.items.length} item${section.items.length===1?"":"s"}`)),
+      section.items.map(item=>{const link=item.kind==="link"||item.kind==="video";return h("a",link?
+        {class:"file-row",href:item.moodle_url,target:"_blank",rel:"noopener"}:{class:"file-row",href:`#/file/${item.id}`},
+        kindTag(item.kind),h("div",{},h("div",{class:"item-title"},item.title),
+          h("div",{class:"meta"},item.pages?`${item.pages} ${item.kind==="pptx"?"slides":item.kind==="docx"?"sections":"pages"}`:link?(item.type==="assign"?"Assignment on Moodle":"On Moodle"):"")),
+        h("span",{class:`badge ${item.badge}`},item.badge==="new"?"New":item.badge==="updated"?"Updated":"")))})))
+      :h("p",{class:"empty"},"No files from this module yet."))
 }
 
-async function renderFile(id) {
-  const file = await api(`/api/resource/${id}`);
-  const isPdf = file.kind === "pdf";
-  const openFile = async page => {
-    if (isPdf) { window.open(fileUrl(file.id, page), "_blank", "noopener"); return; }
-    await api(`/api/open/${file.id}`, { method: "POST" });
-    toast(page ? `Opened — go to ${file.kind === "pptx" ? "slide" : "page"} ${page}` : "Opened");
-  };
-  const unit = file.kind === "pptx" ? "Slide" : file.kind === "docx" ? "Section" : "Page";
-  const outline = file.outline.length
-    ? h("ol", { class: "toc" }, file.outline.map(entry => h("li", {},
-        file.has_file ? h("a", { href: "#", onclick: e => { e.preventDefault(); openFile(entry.page); } }, entry.title)
-                      : h("span", { class: "t" }, entry.title),
-        h("span", { class: "p" }, `${unit} ${entry.page}`))))
-    : h("p", { class: "empty" }, file.read_error ? `No outline: ${file.read_error}.` : "No outline for this file.");
-  const dates = file.dates.length
-    ? file.dates.map(d => h("div", { class: `date-item ${d.upcoming ? "" : "past"}` },
-        h("div", {}, h("span", { class: "when" }, fmt(parseDay(d.date), { weekday: "short", day: "numeric", month: "short", year: "numeric" })),
-          d.kind !== "date" ? h("span", { class: `kindword ${d.kind}` }, d.kind === "exam" ? "Exam" : "Deadline") : null,
-          h("span", { class: "muted" }, `, ${unit.toLowerCase()} ${d.page}`)),
-        h("div", { class: "quote" }, d.snippet)))
-    : h("p", { class: "empty" }, "No dates mentioned in this file.");
-  const facts = [file.pages ? `${file.pages} ${unit.toLowerCase()}s` : null, file.words ? `${file.words.toLocaleString("en-GB")} words` : null,
-                 file.truncated ? "very long: only the first 400 pages were read" : null,
-                 file.updated_at ? `last changed ${new Date(file.updated_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : null].filter(Boolean);
-  show(
-    h("p", { class: "crumbs" }, h("a", { href: `#/module/${file.module_id}` }, file.module), file.section ? ` / ${file.section}` : ""),
-    h("h1", {}, file.title),
-    h("p", { class: "facts" }, facts.join(", ")),
-    h("div", { class: "actions" },
-      file.has_file ? h("button", { class: "btn primary", onclick: () => openFile() }, isPdf ? "Read" : "Open") : null,
-      file.has_file && isPdf ? h("button", { class: "btn", onclick: async () => { await api(`/api/open/${file.id}`, { method: "POST" }); toast("Opened in Preview"); } }, "Open in Preview") : null,
-      h("a", { class: "btn", href: file.moodle_url, target: "_blank", rel: "noopener" }, "Open on Moodle")),
+async function renderFile(id){
+  const file=await api(`/api/resource/${id}`),isPdf=file.kind==="pdf";
+  const openFile=async page=>{if(isPdf){window.open(fileUrl(file.id,page),"_blank","noopener");return}await api(`/api/open/${file.id}`,{method:"POST"});toast(page?`Opened — go to ${page}`:"Opened")};
+  const unit=file.kind==="pptx"?"Slide":file.kind==="docx"?"Section":"Page";
+  const outline=file.outline.length?h("ol",{class:"toc"},file.outline.map(e=>h("li",{},
+    file.has_file?h("a",{href:"#",onclick:x=>{x.preventDefault();openFile(e.page)}},e.title):h("span",{class:"t"},e.title),
+    h("span",{class:"p"},`${unit} ${e.page}`)))):h("p",{class:"empty"},"No outline for this file.");
+  const dates=file.dates.length?file.dates.map(d=>h("div",{class:`date-item ${d.upcoming?"":"past"}`},
+    h("div",{},h("span",{class:"when"},fmt(parseDay(d.date),{day:"numeric",month:"short",year:"numeric"})),
+      d.kind!=="date"?h("span",{class:`badge ${d.kind==="exam"?"due":"updated"}`,style:"margin-left:8px"},d.kind==="exam"?"Exam":"Deadline"):null),
+    h("div",{class:"quote"},d.snippet))):h("p",{class:"empty"},"No dates mentioned in this file.");
+  show(h("p",{class:"crumbs"},h("a",{href:`#/module/${file.module_id}`},file.module),file.section?` / ${file.section}`:""),
+    h("h1",{},file.title),h("p",{class:"sub"},[file.pages?`${file.pages} ${unit.toLowerCase()}s`:null,file.words?`${file.words.toLocaleString("en-GB")} words`:null].filter(Boolean).join(" · ")),
+    h("div",{class:"actions"},file.has_file?h("button",{class:"btn primary",onclick:()=>openFile()},isPdf?"Read":"Open"):null,
+      h("a",{class:"btn",href:file.moodle_url,target:"_blank",rel:"noopener"},"Open on Moodle")),
     notesPanel(file),
-    h("div", { class: "file-grid" },
-      h("section", {}, h("h2", {}, "Outline"), outline),
-      h("section", {}, h("h2", {}, "Dates in this file"), dates,
-        file.versions.length ? h("div", { style: "margin-top:26px" }, h("h2", {}, "Earlier versions"),
-          file.versions.map(v => h("p", { class: "muted" }, `Replaced ${new Date(v.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — kept in ${v.path}`))) : null)));
+    h("div",{class:"file-grid"},
+      h("section",{},h("h2",{},"Outline"),outline),
+      h("section",{},h("h2",{},"Dates"),dates,
+        file.versions.length?h("div",{style:"margin-top:24px"},h("h2",{},"Earlier versions"),
+          file.versions.map(v=>h("p",{class:"muted"},`Replaced ${new Date(v.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}`))):null)))
 }
 
-/* --- study notes ------------------------------------------------------------ */
-function notesPanel(file) {
-  const panel = h("section", { class: "notes", "aria-live": "polite" });
-  const notes = file.notes;
-  if (notes) {
-    const made = notes.source === "claude" ? "Notes from Claude" : `Notes made on this Mac with ${notes.model}`;
-    fill(panel,
-      h("h2", {}, "Study notes"),
-      notes.outdated ? h("p", { class: "warn" }, "This file has changed since these notes were made.") : null,
-      notes.summary ? h("p", { class: "summary" }, notes.summary) : null,
-      notes.key_points.length ? h("ul", {}, notes.key_points.map(point => h("li", {}, point))) : null,
-      h("p", { class: "byline" }, `${made}, ${new Date(notes.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}.`,
-        notes.truncated ? " Only the first part of this long file was used." : ""),
-      h("div", { class: "row-actions" },
-        notes.flashcards.length ? h("a", { class: "btn primary", href: `#/revise?file=${file.id}` }, `Revise ${notes.flashcards.length} flashcards`) : null,
-        makeButtons(file, panel, true)));
-  } else if (file.readable) {
-    fill(panel, h("h2", {}, "Study notes"),
-      h("p", { class: "help" }, "Get a summary, the key points and flashcards for this file, free."),
-      h("div", { class: "row-actions" }, makeButtons(file, panel, false)));
-  } else {
-    return null;
-  }
-  return panel;
+function notesPanel(file){
+  const panel=h("section",{class:"notes","aria-live":"polite"}),n=file.notes;if(!file.readable&&!n)return null;
+  if(n){panel.append(h("h2",{},"Study notes"),n.outdated?h("p",{class:"warn"},"This file has changed since these notes were made."):null,
+    n.summary?h("p",{class:"summary"},n.summary):null,n.key_points.length?h("ul",{},n.key_points.map(x=>h("li",{},x))):null,
+    h("p",{class:"byline"},n.source==="claude"?"Made with Claude":"Made locally on this Mac"),
+    h("div",{class:"row-actions"},n.flashcards.length?h("a",{class:"btn primary",href:`#/revise?file=${file.id}`},`Revise ${n.flashcards.length} cards`):null,makeButtons(file,panel,true)));
+  }else{panel.append(h("h2",{},"Study notes"),h("p",{class:"help"},"Create a short summary, key points and flashcards."),h("div",{class:"row-actions"},makeButtons(file,panel,false)))}
+  return panel
+}
+function makeButtons(file,panel,again){
+  const wrap=h("span",{class:"row-actions",style:"margin:0"}),local=h("button",{class:again?"btn":"btn primary",onclick:()=>summariseHere(file,panel,local)},again?"Remake locally":"Make notes locally"),
+    claude=h("button",{class:"btn",onclick:()=>copyForClaude(file,panel)},"Copy for Claude");wrap.append(local,claude);return wrap
+}
+async function summariseHere(file,panel,button){
+  const ai=await api("/api/ai");if(!ai.running||!ai.model){toast("Open Ollama and install gemma3:4b, or use Claude");return}
+  button.disabled=true;button.textContent="Making notes…";try{file.notes=await api(`/api/notes/${file.id}/ollama`,{method:"POST"});panel.replaceWith(notesPanel(file));await refreshOverview()}catch(e){button.disabled=false;button.textContent="Try again";toast(e.message)}
+}
+async function copyForClaude(file,panel){
+  let prompt;try{prompt=(await api(`/api/claude-prompt/${file.id}`)).prompt;await navigator.clipboard.writeText(prompt);toast("Copied for Claude")}catch(e){toast(e.message);return}
+  panel.querySelector(".paste")?.remove();const box=h("textarea",{placeholder:"Paste Claude's whole reply here"}),save=h("button",{class:"btn primary",onclick:async()=>{save.disabled=true;try{file.notes=await api(`/api/notes/${file.id}/claude`,{method:"POST",body:JSON.stringify({reply:box.value})});panel.replaceWith(notesPanel(file));await refreshOverview();toast("Notes saved")}catch(e){save.disabled=false;toast(e.message)}}},"Save notes");
+  panel.append(h("div",{class:"paste"},h("p",{class:"help"},"Paste the copied prompt into Claude, then paste Claude's reply below."),box,save));box.focus()
 }
 
-function makeButtons(file, panel, again) {
-  const wrap = h("span", { class: "row-actions", style: "margin:0" });
-  const local = h("button", { class: again ? "btn" : "btn primary", onclick: () => summariseHere(file, panel, local) },
-    again ? "Remake on this Mac" : "Summarise on this Mac");
-  const claude = h("button", { class: "btn", onclick: () => copyForClaude(file, panel) }, "Copy for Claude");
-  wrap.append(local, claude);
-  return wrap;
+async function renderRevise(fileId){
+  const data=await api("/api/cards");let queue=data.cards.filter(c=>!fileId||String(c.resource_id)===fileId),total=queue.length,done=0;
+  const deck=h("div",{class:"deck"}),totals=h("section",{class:"totals"});
+  if(data.totals.length)totals.append(h("h2",{},"By module"),...data.totals.map(t=>h("div",{class:"item"},
+    h("div",{},h("div",{class:"item-title"},t.module),h("div",{class:"meta"},`${t.learned} of ${t.total} learned`)),
+    h("span",{class:`badge ${t.due?"due":""}`},t.due?`${t.due} due`:"Up to date")));
+  show(h("h1",{},"Revision"),h("p",{class:"sub"},fileId&&queue[0]?`Flashcards from ${queue[0].title}`:"Cards due for active recall today."),deck,totals);
+  const next=()=>{document.onkeydown=null;if(!queue.length){deck.replaceChildren(h("p",{class:"empty"},total?`Done — ${total} card${total===1?"":"s"} reviewed.`:"No flashcards are due today."));refreshOverview();return}
+    const c=queue[0],answer=h("p",{class:"a",hidden:true},c.answer),grades=h("div",{class:"grades",hidden:true},
+      [["again","Again"],["hard","Hard"],["good","Good"],["easy","Easy"]].map(([g,l])=>h("button",{class:"btn",onclick:()=>answerCard(g)},l))),
+      reveal=h("button",{class:"btn primary",style:"margin-top:14px",onclick:()=>flip()},"Show answer");
+    const flip=()=>{answer.hidden=false;grades.hidden=false;reveal.remove()};const answerCard=async grade=>{await api(`/api/cards/${c.id}/review`,{method:"POST",body:JSON.stringify({grade})});queue.shift();if(grade==="again")queue.push(c);else done++;next()};
+    deck.replaceChildren(h("p",{class:"progress"},`${done+1} of ${total}`),h("article",{class:"card"},h("p",{class:"from"},`${c.module} · `,h("a",{href:`#/file/${c.resource_id}`},c.title)),h("p",{class:"q"},c.question),answer),reveal,grades,h("p",{class:"keys"},"Space to reveal · 1–4 to grade"));
+    document.onkeydown=e=>{if(["INPUT","TEXTAREA"].includes(e.target.tagName))return;if(e.key===" "&&reveal.isConnected){e.preventDefault();flip()}else if(!grades.hidden&&"1234".includes(e.key))answerCard(["again","hard","good","easy"][Number(e.key)-1])}
+  };next()
 }
 
-async function summariseHere(file, panel, button) {
-  const ai = await api("/api/ai");
-  if (!ai.running || !ai.model) {
-    panel.querySelector(".ollama-help")?.remove();
-    panel.append(h("div", { class: "help ollama-help" },
-      h("p", {}, ai.running ? "Ollama is running but has no model yet. In Terminal, run:" : "To summarise on this Mac, install the free Ollama app from ollama.com, open it, then in Terminal run:"),
-      h("p", {}, h("code", {}, "ollama pull gemma3:4b")),
-      h("p", {}, "Then press the button again. Or use Copy for Claude instead.")));
-    return;
-  }
-  button.disabled = true;
-  button.textContent = `Summarising with ${ai.model}…`;
-  toast("Usually 20 seconds to 2 minutes");
-  try {
-    file.notes = await api(`/api/notes/${file.id}/ollama`, { method: "POST" });
-    panel.replaceWith(notesPanel(file));
-    refreshOverview();
-  } catch (error) {
-    button.disabled = false;
-    button.textContent = "Try again";
-    toast(error.message);
-  }
+function renderMore(){
+  const upcoming=overview.coming_up||[];
+  const form=h("form",{class:"search-box",onsubmit:e=>{e.preventDefault();const q=e.target.querySelector("input").value;location.hash=`#/search?q=${encodeURIComponent(q)}`}},
+    h("input",{type:"search",placeholder:"Search inside lectures and notes","aria-label":"Search"}));
+  show(h("h1",{},"More"),h("p",{class:"sub"},"Search and secondary tools live here."),
+    h("div",{class:"more-grid"},
+      h("section",{class:"tool-card"},h("h2",{},"Search"),h("p",{},"Find a word or topic across your downloaded lecture material."),form),
+      h("section",{class:"tool-card"},h("h2",{},"Moodle sync"),h("p",{},"Run the sync when you want to check for new or changed teaching material."),h("p",{class:"muted"},"python3 scripts/sync_moodle.py"))),
+    h("section",{class:"section-block",style:"margin-top:30px"},h("div",{class:"section-title"},h("h2",{},"Coming up")),
+      upcoming.length?h("div",{class:"list"},upcoming.map(x=>h("a",{class:"item",href:`#/file/${x.resource_id}`},
+        h("div",{},h("div",{class:"item-title"},x.title),h("div",{class:"meta"},`${x.module} · ${fmt(parseDay(x.date),{day:"numeric",month:"short",year:"numeric"})}`)),
+        h("span",{class:"badge due"},daysAway(x.date,overview.today))))):h("p",{class:"empty"},"No upcoming deadlines or exams found.")))
 }
 
-async function copyForClaude(file, panel) {
-  let prompt;
-  try { prompt = (await api(`/api/claude-prompt/${file.id}`)).prompt; }
-  catch (error) { toast(error.message); return; }
-  try { await navigator.clipboard.writeText(prompt); toast("Copied. Paste it into Claude"); }
-  catch { toast("Couldn't copy automatically"); }
-  panel.querySelector(".paste")?.remove();
-  const box = h("textarea", { placeholder: "Paste Claude's whole reply here", "aria-label": "Claude's reply" });
-  const save = h("button", { class: "btn primary", onclick: async () => {
-    save.disabled = true;
-    try {
-      file.notes = await api(`/api/notes/${file.id}/claude`, { method: "POST", body: JSON.stringify({ reply: box.value }) });
-      panel.replaceWith(notesPanel(file));
-      refreshOverview();
-      toast("Notes saved");
-    } catch (error) { save.disabled = false; toast(error.message); }
-  } }, "Save notes");
-  panel.append(h("div", { class: "paste" },
-    h("p", { class: "help" }, "The request and this file's text are on your clipboard. Paste them into a new Claude chat, then paste Claude's whole reply below."),
-    h("div", { class: "row-actions" }, h("a", { class: "btn", href: "https://claude.ai/new", target: "_blank", rel: "noopener" }, "Open Claude")),
-    box, save));
-  box.focus();
+async function renderSearch(q){
+  const hits=q.trim()?await api(`/api/search?q=${encodeURIComponent(q)}`):[];
+  show(h("p",{class:"crumbs"},h("a",{href:"#/more"},"More")," / Search"),h("h1",{},q?`Results for “${q}”`:"Search"),
+    h("p",{class:"sub"},hits.length?`${hits.length}${hits.length===40?"+":""} matching pages`:""),
+    hits.length?hits.map(hit=>h("a",hit.kind==="pdf"?{class:"hit",href:fileUrl(hit.resource_id,hit.page),target:"_blank",rel:"noopener"}:{class:"hit",href:`#/file/${hit.resource_id}`},
+      h("div",{class:"title"},hit.title),h("div",{class:"where"},`${hit.module}${hit.section?", "+hit.section:""} · page ${hit.page}`),h("div",{class:"snip"},highlighted(hit.snippet)))):h("p",{class:"empty"},"No matching pages found."))
 }
-
-async function refreshOverview() {
-  overview = await api("/api/overview");
-  renderNav(location.hash.startsWith("#/revise") ? "revise" : "");
+async function refreshOverview(){overview=await api("/api/overview")}
+async function route(){
+  const hash=location.hash.slice(1)||"/",raw=hash.split("?")[0],[,page,arg]=raw.split("/");document.onkeydown=null;
+  try{if(!overview)overview=await api("/api/overview");
+    if(!page){renderNav("home");renderHome()}
+    else if(page==="modules"){renderNav("modules");renderModules()}
+    else if(page==="module"){renderNav("modules");await renderModule(arg)}
+    else if(page==="file"){renderNav("");await renderFile(arg)}
+    else if(page==="revise"){renderNav("revise");await renderRevise(new URLSearchParams(hash.split("?")[1]||"").get("file"))}
+    else if(page==="more"){renderNav("more");renderMore()}
+    else if(page==="search"){renderNav("more");await renderSearch(decodeURIComponent((hash.split("?q=")[1]||"")))}
+    window.scrollTo(0,0)
+  }catch(e){show(h("p",{class:"empty"},`Couldn't load this: ${e.message}`))}
 }
-
-/* --- revise flashcards --------------------------------------------------------- */
-async function renderRevise(fileId) {
-  const data = await api("/api/cards");
-  let queue = data.cards.filter(card => !fileId || String(card.resource_id) === fileId);
-  const total = queue.length;
-  let done = 0;
-  const deck = h("div", { class: "deck" });
-  const totals = h("section", { class: "totals" });
-  if (data.totals.length) {
-    fill(totals, h("h2", {}, "Your flashcards"), data.totals.map(t => h("div", { class: "row" },
-      h("span", { class: "title" }, t.module),
-      h("span", { class: "where" }, `${t.learned} of ${t.total} learned`),
-      h("span", { class: `badge ${t.due ? "" : "removed"}` }, t.due ? `${t.due} due` : "none due"))));
-  }
-  const maker = h("section", { class: "notes", style: "margin-top:30px;max-width:680px", "aria-live": "polite" });
-  show(h("h1", {}, "Revise"),
-       h("p", { class: "sub" }, fileId && queue[0] ? `Flashcards from ${queue[0].title}` : "Cards come back just before you'd forget them."),
-       deck, fileId ? null : maker, totals);
-  if (!fileId) batchPanel(maker);
-
-  const next = () => {
-    document.onkeydown = null;
-    if (!queue.length) {
-      deck.replaceChildren(h("p", { class: "empty" }, total
-        ? `Done: ${total} ${total === 1 ? "card" : "cards"} revised. Come back tomorrow for the next ones.`
-        : "No flashcards are due. Make some from a file's page with Summarise on this Mac or Copy for Claude."));
-      refreshOverview();
-      return;
-    }
-    const card = queue[0];
-    const answer = h("p", { class: "a", hidden: true }, card.answer);
-    const grades = h("div", { class: "grades", hidden: true },
-      [["again", "Again", "see it again today"], ["hard", "Hard", "a bit later"], ["good", "Good", "spaced out"], ["easy", "Easy", "much later"]]
-        .map(([grade, label, hint], n) => h("button", { class: `btn ${grade}`, onclick: () => answerCard(grade) }, label, h("small", {}, hint))));
-    const reveal = h("button", { class: "btn primary", style: "margin-top:16px", onclick: () => flip() }, "Show answer");
-    const flip = () => { answer.hidden = false; grades.hidden = false; reveal.remove(); grades.querySelector(".good").focus(); };
-    const answerCard = async grade => {
-      document.onkeydown = null;
-      await api(`/api/cards/${card.id}/review`, { method: "POST", body: JSON.stringify({ grade }) });
-      queue.shift();
-      if (grade === "again") queue.push(card); else done += 1;
-      next();
-    };
-    deck.replaceChildren(
-      h("p", { class: "progress" }, `${done + 1} of ${total}`),
-      h("article", { class: "card" },
-        h("p", { class: "from" }, `${card.module}, `, h("a", { href: `#/file/${card.resource_id}` }, card.title)),
-        h("p", { class: "q" }, card.question), answer),
-      reveal, grades,
-      h("p", { class: "keys" }, "Keyboard: space shows the answer, then 1 to 4."));
-    document.onkeydown = event => {
-      if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
-      if (event.key === " " && reveal.isConnected) { event.preventDefault(); flip(); }
-      else if (grades.hidden === false && "1234".includes(event.key)) answerCard(["again", "hard", "good", "easy"][Number(event.key) - 1]);
-    };
-    reveal.focus();
-  };
-  next();
-}
-
-/* notes for every file, made in the background on this Mac */
-async function batchPanel(panel) {
-  let ai;
-  try { ai = await api("/api/ai"); } catch { return; }
-  const batch = ai.batch;
-  const running = batch && batch.running;
-  panel.replaceChildren();
-  const finished = batch && !running && batch.total;
-  if (!running && !ai.waiting && !finished) { panel.remove(); return; }
-  fill(panel, h("h2", {}, "Notes for all your files"));
-  if (running) {
-    fill(panel,
-      h("p", { class: "help" }, `Making notes on this Mac: ${batch.done} of ${batch.total} done.`, batch.current ? ` Now: ${batch.current}.` : ""),
-      h("p", { class: "help" }, "You can keep using the page, or close it; this carries on while the Study desk is open."),
-      h("button", { class: "btn", onclick: async () => { await api("/api/notes/stop", { method: "POST" }); toast("Stopping after this file"); } }, "Stop"));
-    clearTimeout(batchPanel.timer);
-    batchPanel.timer = setTimeout(() => { if (panel.isConnected) batchPanel(panel); }, 3000);
-    return;
-  }
-  if (finished) {
-    fill(panel, h("p", { class: "help" }, batch.stopped ? `Stopped after ${batch.done} ${batch.done === 1 ? "file" : "files"}.` : `Finished: notes made for ${batch.done} ${batch.done === 1 ? "file" : "files"}.`),
-      batch.errors.map(e => h("p", { class: "warn" }, e)));
-    refreshOverview();
-    if (!ai.waiting) return;
-  }
-  if (!ai.running || !ai.model) {
-    fill(panel, h("p", { class: "help" }, `${ai.waiting} files don't have notes yet. To make them for free on this Mac, install the Ollama app from ollama.com, open it, then in Terminal run `, h("code", {}, "ollama pull gemma3:4b"), "."));
-    return;
-  }
-  fill(panel,
-    h("p", { class: "help" }, `${ai.waiting} ${ai.waiting === 1 ? "file doesn't" : "files don't"} have notes yet. ${ai.model} can make them on this Mac, newest first, usually under a minute each. Very long reference books are skipped; open one to make its notes on its own.`),
-    h("button", { class: "btn primary", onclick: async () => { await api("/api/notes/all", { method: "POST" }); batchPanel(panel); } }, `Make notes for ${ai.waiting} ${ai.waiting === 1 ? "file" : "files"}`));
-}
-
-async function renderSearch(q) {
-  document.getElementById("q").value = q;
-  const hits = q.trim() ? await api(`/api/search?q=${encodeURIComponent(q)}`) : [];
-  show(
-    h("h1", {}, q.trim() ? `Results for “${q}”` : "Search"),
-    h("p", { class: "sub" }, hits.length ? `${hits.length}${hits.length === 40 ? "+" : ""} matching pages, best first` : ""),
-    hits.length ? hits.map(hit => h("a", hit.kind === "pdf"
-        ? { class: "hit", href: fileUrl(hit.resource_id, hit.page), target: "_blank", rel: "noopener", title: `Open at page ${hit.page}` }
-        : { class: "hit", href: `#/file/${hit.resource_id}` },
-      h("div", { class: "title" }, hit.title),
-      h("div", { class: "where" }, `${hit.module}${hit.section ? ", " + hit.section : ""}. Page ${hit.page}${hit.page_title && hit.page_title !== hit.title ? ": " + hit.page_title : ""}`),
-      h("div", { class: "snip" }, highlighted(hit.snippet))))
-    : q.trim() ? h("p", { class: "empty" }, "No pages mention that. Try fewer or different words — searching “psychro” also finds psychrometry.") : null);
-}
-
-/* --- router --------------------------------------------------------------- */
-async function route() {
-  const hash = location.hash.slice(1) || "/";
-  const [, page, arg] = hash.split("/");
-  document.onkeydown = null;
-  try {
-    if (!overview) overview = await api("/api/overview");
-    if (!page) { renderNav("home"); renderHome(); }
-    else if (page === "module") { renderNav(`module/${arg}`); await renderModule(arg); }
-    else if (page === "file") { renderNav(""); await renderFile(arg); }
-    else if (page.startsWith("revise")) { renderNav("revise"); await renderRevise(new URLSearchParams(page.split("?")[1] || "").get("file")); }
-    else if (page.startsWith("search")) { renderNav(""); await renderSearch(decodeURIComponent(hash.split("?q=")[1] || "")); }
-    window.scrollTo(0, 0);
-  } catch (error) {
-    show(h("p", { class: "empty" }, `Couldn't load this: ${error.message}. If you restarted the dashboard, reload the page.`));
-  }
-}
-document.getElementById("search-form").addEventListener("submit", e => {
-  e.preventDefault();
-  location.hash = `#/search?q=${encodeURIComponent(document.getElementById("q").value)}`;
-});
-window.addEventListener("hashchange", route);
-route();
+window.addEventListener("hashchange",route);route();
 </script>
 </body>
 </html>
