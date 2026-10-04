@@ -21,6 +21,8 @@ from .urls import COURSES_URL, allowed
 SIGN_IN_TIMEOUT_S = 600
 PAGE_TIMEOUT_MS = 60_000
 AUTO_LOGIN_WAIT_MS = 30_000
+USERNAME_FIELD = "form#login input#username, input#username"
+LOGIN_BUTTON = "form#login #loginbtn, #loginbtn, form#login button[type=submit]"
 # Moodle's identity-provider buttons (standard markup), or links into its SSO plugins.
 SSO_BUTTONS = ("a.login-identityprovider-btn, .potentialidp a, a[href*='/auth/oidc/'], "
                "a[href*='/auth/saml2/'], a[href*='/auth/shibboleth/']")
@@ -58,36 +60,66 @@ def signed_in_url(url: str) -> bool:
 def sign_in(page: Any, *, timeout_s: int = SIGN_IN_TIMEOUT_S, auto_wait_ms: int = AUTO_LOGIN_WAIT_MS) -> None:
     """Open My Modules, signing in if needed.
 
-    Moodle forgets its own session when the browser closes, but the university
-    sign-in is usually remembered. So on Moodle's login page we press the
-    university login button once; if that completes by itself, no one has to
-    do anything. Otherwise (password or MFA needed) we wait for the user.
-    No credentials are ever typed or stored by this code.
+    Moodle forgets its own session when the browser closes. On Moodle's login
+    page we try, once each, what a person would press:
+
+    1. the login form's "Log in" button, but only if the browser has already
+       filled in a saved username (the browser's password manager fills the
+       password; this code never reads or stores it);
+    2. the university single-sign-on button, in case that sign-in is remembered.
+
+    If neither finishes by itself, we wait for the user (e.g. for MFA).
     """
     page.goto(COURSES_URL, wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS)
     if signed_in_url(page.url):
         return
-    if press_university_login(page):
-        try:
-            page.wait_for_url(signed_in_url, timeout=auto_wait_ms)
-            print("Signed in to Moodle automatically.", flush=True)
+    for attempt, how in ((submit_saved_login, "saved browser login"), (press_university_login, "university sign-in")):
+        if on_login_page(page.url) and attempt(page) and _reached_moodle(page, auto_wait_ms):
+            print(f"Signed in to Moodle automatically ({how}).", flush=True)
             return
-        except Exception:
-            pass  # the university sign-in needs the user
     print("Sign in to Moodle in the browser window (including MFA). Waiting...", flush=True)
     page.wait_for_url(signed_in_url, timeout=timeout_s * 1000)
 
 
+def on_login_page(url: str) -> bool:
+    return allowed(url) and urlparse(url).path.startswith("/login/")
+
+
+def submit_saved_login(page: Any) -> bool:
+    """Press "Log in" on Moodle's form if the browser has filled in a saved username."""
+    try:
+        username = page.locator(USERNAME_FIELD).first
+        if username.count() == 0:
+            return False
+        username.click(timeout=5_000)  # a real click lets the browser release its autofilled values
+        if not username.input_value().strip():
+            return False
+        button = page.locator(LOGIN_BUTTON).first
+        if button.count() == 0:
+            return False
+        button.click(timeout=5_000)
+        return True
+    except Exception:
+        return False
+
+
 def press_university_login(page: Any) -> bool:
     """On Moodle's own login page, click the single-sign-on button. Returns True if clicked."""
-    parts = urlparse(page.url)
-    if not (allowed(page.url) and parts.path.startswith("/login/")):
+    if not on_login_page(page.url):
         return False
     try:
         button = page.locator(SSO_BUTTONS).first
         if button.count() == 0:
             return False
         button.click(timeout=5_000)
+        return True
+    except Exception:
+        return False
+
+
+def _reached_moodle(page: Any, timeout_ms: int) -> bool:
+    try:
+        page.wait_for_url(signed_in_url, timeout=timeout_ms)
         return True
     except Exception:
         return False
