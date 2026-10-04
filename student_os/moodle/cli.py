@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sqlite3
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, tzinfo
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -170,13 +170,23 @@ def format_totals(reports: list[ModuleReport], *, dry_run: bool = False) -> str:
 
 def print_recent(conn: sqlite3.Connection, days: float) -> None:
     since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    events = db.events_since(conn, since)
+    print(format_recent(db.events_since(conn, since), days))
+
+
+def format_recent(events: list, days: float, tz: tzinfo | None = None) -> str:
+    """Changes grouped by module, oldest first, in local time (or ``tz``)."""
     if not events:
-        print(f"No changes in the last {days:g} day(s).")
-        return
+        return f"No changes in the last {days:g} day(s)."
+    lines = [f"Changes in the last {days:g} day(s)"]
+    module = None
     for e in events:
-        where = " / ".join(part for part in (e["module"], e["section"], e["title"]) if part)
-        print(f"{e['created_at'][:16].replace('T', ' ')}  {e['kind']:<10} {where}")
+        if e["module"] != module:
+            module = e["module"]
+            lines += ["", module]
+        when = datetime.strptime(e["created_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        where = " / ".join(part for part in (e["section"], e["title"]) if part)
+        lines.append(f"  {when.astimezone(tz):%d %b %H:%M}  {e['kind']:<10} {where}")
+    return "\n".join(lines)
 
 
 # --- setup -------------------------------------------------------------------------

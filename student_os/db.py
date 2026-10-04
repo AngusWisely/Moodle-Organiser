@@ -321,7 +321,7 @@ def events_since(conn: sqlite3.Connection, since: str) -> list[sqlite3.Row]:
     return conn.execute(
         "SELECT e.created_at, e.kind, m.name AS module, r.section, r.title, r.local_path, e.message"
         " FROM sync_events e JOIN resources r ON r.id = e.resource_id JOIN modules m ON m.id = r.module_id"
-        " WHERE e.created_at >= ? ORDER BY e.created_at, m.name, r.title",
+        " WHERE e.created_at >= ? ORDER BY m.name, e.created_at, e.id",
         (since,),
     ).fetchall()
 
