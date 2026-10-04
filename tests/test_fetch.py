@@ -1,7 +1,5 @@
 """HTTP layer against a fake Moodle: probe, downloads, conditional requests, login and redirect safety."""
 
-from dataclasses import dataclass, field
-
 import pytest
 
 from student_os.moodle.fetch import (
@@ -17,50 +15,10 @@ from student_os.moodle.fetch import (
     probe_resource,
 )
 
-M = "https://moodle.nottingham.ac.uk"
+from tests.fakes import LOGIN_HTML, M, FakeMoodle, FakeResponse, html, pdf, redirect
+
 VIEW = f"{M}/mod/resource/view.php?id=4521"
 FILE = f"{M}/pluginfile.php/77/mod_resource/content/4/notes.pdf"
-LOGIN_HTML = '<form action="/login/index.php"><input type="hidden" name="logintoken" value="x"></form>'
-
-
-@dataclass
-class FakeResponse:
-    status: int
-    url: str
-    headers: dict = field(default_factory=dict)
-    content: bytes = b""
-
-    def body(self) -> bytes:
-        return self.content
-
-
-class FakeMoodle:
-    """Answers GETs from a table of url -> response, recording every request."""
-
-    def __init__(self, routes: dict):
-        self.routes = routes
-        self.requests: list[tuple[str, dict]] = []
-
-    def get(self, url, *, headers, timeout_ms):
-        self.requests.append((url, dict(headers)))
-        make = self.routes.get(url)
-        if make is None:
-            raise AssertionError(f"Unexpected request: {url}")
-        return make(url, headers) if callable(make) else make
-
-
-def redirect(url: str, location: str) -> FakeResponse:
-    return FakeResponse(303, url, {"location": location})
-
-
-def pdf(url: str, content: bytes = b"%PDF-1.7", **headers) -> FakeResponse:
-    return FakeResponse(200, url, {"content-type": "application/pdf", **headers}, content)
-
-
-def html(url: str, text: str) -> FakeResponse:
-    return FakeResponse(200, url, {"content-type": "text/html; charset=utf-8"}, text.encode())
-
-
 PROBE = VIEW + "&redirect=1"
 
 

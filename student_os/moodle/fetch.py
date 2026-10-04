@@ -172,6 +172,22 @@ def fetch_file(transport: Transport, url: str, *, etag: str | None = None, last_
     raise FetchError("Too many redirects")
 
 
+def fetch_page(transport: Transport, url: str, *, timeout_ms: int = PROBE_TIMEOUT_MS) -> tuple[str, str]:
+    """Fetch a Moodle web page (e.g. a folder). Returns ``(final_url, html)``."""
+    for _ in range(MAX_HOPS):
+        response = transport.get(url, headers={}, timeout_ms=timeout_ms)
+        if response.status in REDIRECTS:
+            url = _next_hop(response)
+            continue
+        _raise_for_status(response)
+        if not _content_type(response).startswith("text/html"):
+            raise FetchError("Expected a web page")
+        html = response.body().decode("utf-8", "replace")
+        _raise_if_login(response.url, html)
+        return response.url, html
+    raise FetchError("Too many redirects")
+
+
 def is_video_url(url: str) -> bool:
     return Path(unquote(urlparse(url).path)).suffix.lower() in VIDEO_EXT
 
