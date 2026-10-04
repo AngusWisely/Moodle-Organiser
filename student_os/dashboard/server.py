@@ -15,6 +15,7 @@ import secrets
 import sqlite3
 import subprocess
 import sys
+import time
 from collections.abc import Callable
 from contextlib import closing
 from datetime import date
@@ -50,6 +51,7 @@ class Dashboard:
         self.root = root
         self.ollama = ollama or notes.Ollama()
         self.batch: notes.BatchProgress | None = None
+        self.last_request = time.monotonic()  # for stopping a background dashboard when idle
         self.db_path = root / "data" / "moodle.sqlite3"
         self.token = token or secrets.token_urlsafe(24)
         self.today = today
@@ -77,6 +79,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
     # --- routing ---------------------------------------------------------------------
 
     def do_GET(self) -> None:
+        self.app.last_request = time.monotonic()
         if not self._host_ok():
             return self._send_error(HTTPStatus.FORBIDDEN, "Wrong host")
         url = urlparse(self.path)
@@ -117,6 +120,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self._send_error(HTTPStatus.NOT_FOUND, "Not found")
 
     def do_POST(self) -> None:
+        self.app.last_request = time.monotonic()
         if not self._host_ok():
             return self._send_error(HTTPStatus.FORBIDDEN, "Wrong host")
         url = urlparse(self.path)

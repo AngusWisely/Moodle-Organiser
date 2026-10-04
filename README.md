@@ -58,6 +58,8 @@ Opens a page in your browser, built from your synced files:
 - **Search inside your files:** every word of your PDFs, slides and Word files. A result in a PDF opens at that page.
 - **Each file's outline:** slide titles and headings as a table of contents, plus any dates it mentions.
 
+**Open it without Terminal:** run `python3 scripts/make_app.py` once. It puts **Study desk** in your Applications folder; drag it to the Dock. Double-click it any time: it opens the page, starting the dashboard quietly in the background if it isn't already running. The background dashboard switches itself off after three hours unused. (If you move this folder, run `make_app.py` again.)
+
 It runs only on your computer (127.0.0.1) and needs no internet. Press Ctrl+C in Terminal to close it. The sync keeps the search index up to date; files are read again only when they change.
 
 ## Study notes and flashcards (free)
