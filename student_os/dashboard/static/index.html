@@ -144,18 +144,55 @@ function renderModules(){
 }
 
 async function renderModule(id){
-  const module=await api(`/api/module/${id}`);
-  show(h("p",{class:"crumbs"},h("a",{href:"#/modules"},"Modules")," / ",module.name),
-    h("h1",{},module.name),
-    h("p",{class:"sub"},module.code?`${module.code}. `:"",h("a",{href:module.url,target:"_blank",rel:"noopener"},"Open on Moodle")),
-    module.sections.length?module.sections.map(section=>h("section",{class:"module-section"},
-      h("h2",{},section.name,h("span",{},`${section.items.length} item${section.items.length===1?"":"s"}`)),
-      section.items.map(item=>{const link=item.kind==="link"||item.kind==="video";return h("a",link?
-        {class:"file-row",href:item.moodle_url,target:"_blank",rel:"noopener"}:{class:"file-row",href:`#/file/${item.id}`},
-        kindTag(item.kind),h("div",{},h("div",{class:"item-title"},item.title),
-          h("div",{class:"meta"},item.pages?`${item.pages} ${item.kind==="pptx"?"slides":item.kind==="docx"?"sections":"pages"}`:link?(item.type==="assign"?"Assignment on Moodle":"On Moodle"):"")),
-        h("span",{class:`badge ${item.badge}`},item.badge==="new"?"New":item.badge==="updated"?"Updated":"")))})))
-      :h("p",{class:"empty"},"No files from this module yet."))
+  const module = await api(`/api/module/${id}`);
+
+  const sections = module.sections.length
+    ? module.sections.map(section => {
+        const rows = section.items.map(item => {
+          const isLink = item.kind === "link" || item.kind === "video";
+          const attrs = isLink
+            ? { class: "file-row", href: item.moodle_url, target: "_blank", rel: "noopener" }
+            : { class: "file-row", href: `#/file/${item.id}` };
+
+          let detail = "";
+          if (item.pages) {
+            const units = item.kind === "pptx" ? "slides" : item.kind === "docx" ? "sections" : "pages";
+            detail = `${item.pages} ${units}`;
+          } else if (isLink) {
+            detail = item.type === "assign" ? "Assignment on Moodle" : "On Moodle";
+          }
+
+          return h("a", attrs,
+            kindTag(item.kind),
+            h("div", {},
+              h("div", { class: "item-title" }, item.title),
+              detail ? h("div", { class: "meta" }, detail) : null
+            ),
+            h("span", { class: `badge ${item.badge || ""}` },
+              item.badge === "new" ? "New" : item.badge === "updated" ? "Updated" : ""
+            )
+          );
+        });
+
+        return h("section", { class: "module-section" },
+          h("h2", {},
+            section.name,
+            h("span", {}, `${section.items.length} item${section.items.length === 1 ? "" : "s"}`)
+          ),
+          rows
+        );
+      })
+    : h("p", { class: "empty" }, "No files from this module yet.");
+
+  show(
+    h("p", { class: "crumbs" }, h("a", { href: "#/modules" }, "Modules"), " / ", module.name),
+    h("h1", {}, module.name),
+    h("p", { class: "sub" },
+      module.code ? `${module.code}. ` : "",
+      h("a", { href: module.url, target: "_blank", rel: "noopener" }, "Open on Moodle")
+    ),
+    sections
+  );
 }
 
 async function renderFile(id){
@@ -205,20 +242,105 @@ async function copyForClaude(file,panel){
 }
 
 async function renderRevise(fileId){
-  const data=await api("/api/cards");let queue=data.cards.filter(c=>!fileId||String(c.resource_id)===fileId),total=queue.length,done=0;
-  const deck=h("div",{class:"deck"}),totals=h("section",{class:"totals"});
-  if(data.totals.length)totals.append(h("h2",{},"By module"),...data.totals.map(t=>h("div",{class:"item"},
-    h("div",{},h("div",{class:"item-title"},t.module),h("div",{class:"meta"},`${t.learned} of ${t.total} learned`)),
-    h("span",{class:`badge ${t.due?"due":""}`},t.due?`${t.due} due`:"Up to date")));
-  show(h("h1",{},"Revision"),h("p",{class:"sub"},fileId&&queue[0]?`Flashcards from ${queue[0].title}`:"Cards due for active recall today."),deck,totals);
-  const next=()=>{document.onkeydown=null;if(!queue.length){deck.replaceChildren(h("p",{class:"empty"},total?`Done — ${total} card${total===1?"":"s"} reviewed.`:"No flashcards are due today."));refreshOverview();return}
-    const c=queue[0],answer=h("p",{class:"a",hidden:true},c.answer),grades=h("div",{class:"grades",hidden:true},
-      [["again","Again"],["hard","Hard"],["good","Good"],["easy","Easy"]].map(([g,l])=>h("button",{class:"btn",onclick:()=>answerCard(g)},l))),
-      reveal=h("button",{class:"btn primary",style:"margin-top:14px",onclick:()=>flip()},"Show answer");
-    const flip=()=>{answer.hidden=false;grades.hidden=false;reveal.remove()};const answerCard=async grade=>{await api(`/api/cards/${c.id}/review`,{method:"POST",body:JSON.stringify({grade})});queue.shift();if(grade==="again")queue.push(c);else done++;next()};
-    deck.replaceChildren(h("p",{class:"progress"},`${done+1} of ${total}`),h("article",{class:"card"},h("p",{class:"from"},`${c.module} · `,h("a",{href:`#/file/${c.resource_id}`},c.title)),h("p",{class:"q"},c.question),answer),reveal,grades,h("p",{class:"keys"},"Space to reveal · 1–4 to grade"));
-    document.onkeydown=e=>{if(["INPUT","TEXTAREA"].includes(e.target.tagName))return;if(e.key===" "&&reveal.isConnected){e.preventDefault();flip()}else if(!grades.hidden&&"1234".includes(e.key))answerCard(["again","hard","good","easy"][Number(e.key)-1])}
-  };next()
+  const data = await api("/api/cards");
+  let queue = data.cards.filter(card => !fileId || String(card.resource_id) === fileId);
+  const total = queue.length;
+  let done = 0;
+
+  const deck = h("div", { class: "deck" });
+  const totals = h("section", { class: "totals" });
+
+  if (data.totals.length) {
+    totals.append(
+      h("h2", {}, "By module"),
+      ...data.totals.map(t =>
+        h("div", { class: "item" },
+          h("div", {},
+            h("div", { class: "item-title" }, t.module),
+            h("div", { class: "meta" }, `${t.learned} of ${t.total} learned`)
+          ),
+          h("span", { class: `badge ${t.due ? "due" : ""}` }, t.due ? `${t.due} due` : "Up to date")
+        )
+      )
+    );
+  }
+
+  show(
+    h("h1", {}, "Revision"),
+    h("p", { class: "sub" },
+      fileId && queue[0] ? `Flashcards from ${queue[0].title}` : "Cards due for active recall today."
+    ),
+    deck,
+    totals
+  );
+
+  const next = () => {
+    document.onkeydown = null;
+
+    if (!queue.length) {
+      deck.replaceChildren(
+        h("p", { class: "empty" },
+          total ? `Done — ${total} card${total === 1 ? "" : "s"} reviewed.` : "No flashcards are due today."
+        )
+      );
+      refreshOverview();
+      return;
+    }
+
+    const card = queue[0];
+    const answer = h("p", { class: "a", hidden: true }, card.answer);
+    const grades = h("div", { class: "grades", hidden: true });
+
+    const answerCard = async grade => {
+      await api(`/api/cards/${card.id}/review`, {
+        method: "POST",
+        body: JSON.stringify({ grade })
+      });
+      queue.shift();
+      if (grade === "again") queue.push(card);
+      else done += 1;
+      next();
+    };
+
+    for (const [grade, label] of [["again","Again"],["hard","Hard"],["good","Good"],["easy","Easy"]]) {
+      grades.append(h("button", { class: "btn", onclick: () => answerCard(grade) }, label));
+    }
+
+    const reveal = h("button", { class: "btn primary", style: "margin-top:14px" }, "Show answer");
+    const flip = () => {
+      answer.hidden = false;
+      grades.hidden = false;
+      reveal.remove();
+    };
+    reveal.addEventListener("click", flip);
+
+    deck.replaceChildren(
+      h("p", { class: "progress" }, `${done + 1} of ${total}`),
+      h("article", { class: "card" },
+        h("p", { class: "from" },
+          `${card.module} · `,
+          h("a", { href: `#/file/${card.resource_id}` }, card.title)
+        ),
+        h("p", { class: "q" }, card.question),
+        answer
+      ),
+      reveal,
+      grades,
+      h("p", { class: "keys" }, "Space to reveal · 1–4 to grade")
+    );
+
+    document.onkeydown = event => {
+      if (["INPUT", "TEXTAREA"].includes(event.target.tagName)) return;
+      if (event.key === " " && reveal.isConnected) {
+        event.preventDefault();
+        flip();
+      } else if (!grades.hidden && "1234".includes(event.key)) {
+        answerCard(["again", "hard", "good", "easy"][Number(event.key) - 1]);
+      }
+    };
+  };
+
+  next();
 }
 
 function renderMore(){
