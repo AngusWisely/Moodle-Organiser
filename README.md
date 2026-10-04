@@ -45,6 +45,21 @@ Architectural Engineering Design 3
 
 `python3 organiser.py` still works and runs the same sync.
 
+## Study desk (dashboard)
+
+```bash
+python3 scripts/dashboard.py
+```
+
+Opens a page in your browser, built from your synced files:
+
+- **Coming up:** deadlines and exams found in briefs and handbooks, on a week-by-week ruler, each with the sentence it came from.
+- **New and updated:** what the sync fetched recently, by day.
+- **Search inside your files:** every word of your PDFs, slides and Word files. A result in a PDF opens at that page.
+- **Each file's outline:** slide titles and headings as a table of contents, plus any dates it mentions.
+
+It runs only on your computer (127.0.0.1) and needs no internet. Press Ctrl+C in Terminal to close it. The sync keeps the search index up to date; files are read again only when they change.
+
 ## Where things live
 
 | Path | Contents | In Git? |
@@ -75,4 +90,6 @@ Tests use a fake Moodle and never go online. Code is in `student_os/`:
 | `moodle/storage.py` | Atomic writes, hashing, `versions/` |
 | `moodle/sync.py` | Orchestration per module |
 | `moodle/cli.py` | Command line and reports |
+| `library/` | Text extraction, outlines, dates, full-text search |
+| `dashboard/` | Local web server and the study desk page |
 | `db.py` | SQLite schema, records and history |
