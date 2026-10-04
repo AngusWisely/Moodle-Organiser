@@ -285,3 +285,15 @@ def test_module_choice_is_remembered(env, monkeypatch):
     assert [m.name for m in choose_modules(env.conn, on_moodle, force=False)] == ["Maths"]
     monkeypatch.setattr("builtins.input", lambda prompt="": pytest.fail("should not ask again"))
     assert [m.name for m in choose_modules(env.conn, on_moodle, force=False)] == ["Maths"]
+
+
+def test_recent_changes_grouped_by_module_in_local_time(env):
+    from datetime import timezone as tz_module
+    from student_os.moodle.cli import format_recent
+
+    env.sync(ITEMS[:1])
+    events = db.events_since(env.conn, "2026-01-01T00:00:00Z")
+    text = format_recent(events, 1, tz=tz_module(timedelta(hours=1)))
+    assert text.splitlines() == ["Changes in the last 1 day(s)", "", "Design 3",
+                                 "  01 Oct 09:00  new        Week 1 / Lecture 1"]
+    assert format_recent([], 2) == "No changes in the last 2 day(s)."

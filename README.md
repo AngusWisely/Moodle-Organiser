@@ -1,54 +1,78 @@
 # Moodle organiser
 
-A small Python script I made to keep my University of Nottingham Moodle files in one place. It opens a browser so I can sign in normally, then downloads available teaching files into module folders and makes a searchable `index.csv`.
+Keeps my University of Nottingham Moodle teaching files in one place, and tracks what is new or has changed. It is the Moodle sync foundation of a future personal "Student OS".
 
-I run it every week or so to pick up new notes. It skips files already downloaded and leaves new videos as links by default.
+You sign in normally (with MFA) in a browser window it opens. It never asks for or stores a password.
 
-## Run it
+## Setup
 
-Install Python 3.11+ and then, from this folder:
+Install Python 3.11+, then from this folder:
 
 ```bash
 python3 -m pip install -r requirements.txt
 python3 -m playwright install chromium
-python3 organiser.py
 ```
 
-Sign in to Moodle in the browser window, return to Terminal, press Enter, and choose the modules to scan. Files and the index appear in `materials/`.
-
-`python3 organiser.py --videos` also downloads new MP4s. `python3 organiser.py --refresh` re-downloads files if a lecturer has replaced one at the same Moodle link.
-
-The script keeps a local browser profile for sign-in, but never asks for a password. `materials/` and `.browser-profile/` are ignored by Git so course documents and sign-in data stay off GitHub.
-
-This is a personal helper, so Moodle layout changes or external services such as Echo360 may need manual handling.
-
-## Daily sync (new)
+## Sync
 
 ```bash
 python3 scripts/sync_moodle.py
 ```
 
-The first run imports your existing `materials/index.csv`, so files already downloaded are not fetched again, and asks which modules to sync (remembered; change with `--select`). Sign in when the browser asks; there is no need to press Enter.
+The first time, it asks which modules to sync; the choice is remembered. Sign in when the browser asks; the sync carries on by itself.
 
-Each run checks every resource cheaply and downloads only what is new or has genuinely changed (compared by SHA-256). When a lecturer replaces a file, the old copy is kept in a `versions/` folder beside it. Items that disappear from Moodle are marked removed; their files are never deleted.
+Each run checks every resource cheaply and downloads only files that are new or have genuinely changed (compared by SHA-256). Files go to `materials/<module>/<section>/`.
+
+```text
+Architectural Engineering Design 3
+✓ 139 checked
++ 2 new
+~ 1 updated
+```
+
+- **Replaced files:** when a lecturer replaces a file, the old copy is kept in a `versions/` folder beside it.
+- **Removed items:** they are marked removed after a complete scan of the module; files are never deleted.
+- **Failures:** one failed download does not stop the run, and never damages a file you already have.
+- **Expired sign-in:** the run stops cleanly; run it again and sign in.
 
 | Option | What it does |
 |---|---|
-| `--dry-run` | Check Moodle and report, changing nothing |
 | `--recent [DAYS]` | List what changed in the last day (or DAYS), without opening the browser |
-| `--refresh` | Download and hash everything to catch silent changes (slow; occasional use) |
-| `--videos` | Download videos instead of linking them |
+| `--dry-run` | Check Moodle and report what would be downloaded, changing nothing |
 | `--select` | Choose modules again |
+| `--videos` | Download videos instead of linking them |
+| `--refresh` | Download and hash every file to catch silent changes (slow; occasional use) |
 
-State lives in `data/moodle.sqlite3`; `materials/index.csv` is regenerated from it for spreadsheets.
+`python3 organiser.py` still works and runs the same sync.
+
+## Where things live
+
+| Path | Contents | In Git? |
+|---|---|---|
+| `materials/` | Downloaded files, `versions/`, and `index.csv` (for spreadsheets) | No |
+| `data/moodle.sqlite3` | What has been seen, downloaded and changed, with history | No |
+| `.browser-profile/` | The browser's Moodle sign-in | No |
+
+The first sync imported the old `materials/index.csv`, so files downloaded by the original script were recognised rather than fetched again.
+
+This is a personal helper: Moodle layout changes, or external services such as Echo360, may need manual handling.
 
 ## Development
-
-Code lives in `student_os/`: `moodle/scraper.py` (HTML parsing), `session.py` (browser and sign-in), `fetch.py` (HTTP), `detector.py` (change decisions), `storage.py` (files and versions), `sync.py` (orchestration), and `db.py` (SQLite). `organiser.py` still works as before.
 
 ```bash
 python3 -m pip install -r requirements-dev.txt
 python3 -m pytest
 ```
 
-Tests never contact Moodle. `data/` is ignored by Git, like `materials/`.
+Tests use a fake Moodle and never go online. Code is in `student_os/`:
+
+| Module | Job |
+|---|---|
+| `moodle/session.py` | Browser, sign-in detection, course-page scanning |
+| `moodle/scraper.py` | HTML parsing |
+| `moodle/fetch.py` | HTTP: revision probe, downloads, login detection, redirect safety |
+| `moodle/detector.py` | Pure decisions: what to fetch, what a result means |
+| `moodle/storage.py` | Atomic writes, hashing, `versions/` |
+| `moodle/sync.py` | Orchestration per module |
+| `moodle/cli.py` | Command line and reports |
+| `db.py` | SQLite schema, records and history |
