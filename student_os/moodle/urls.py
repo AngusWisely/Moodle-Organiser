@@ -7,7 +7,7 @@ cookies are only ever sent to Nottingham Moodle.
 from __future__ import annotations
 
 import re
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qsl, unquote, urlencode, urlparse, urlunparse
 
 BASE = "https://moodle.nottingham.ac.uk"
 COURSES_URL = f"{BASE}/my/courses.php"
@@ -31,6 +31,34 @@ def file_revision(url: str) -> int | None:
         return None
     match = _REVISIONED.match(urlparse(url).path)
     return int(match.group(2)) if match else None
+
+
+def resource_key(url: str) -> str:
+    """Stable identity for a Moodle link, unaffected by file revisions or renames of the module.
+
+    * ``/mod/<kind>/view.php?id=N`` -> ``cm:N`` (course-module id)
+    * ``/pluginfile.php/<ctx>/<component>/<area>/[<rev>/]<path>`` -> ``file:<ctx>/<component>/<area>/<path>``
+    * anything else -> ``url:<url without fragment>``
+    """
+    parts = urlparse(url)
+    if re.fullmatch(r"/mod/[a-z]+/view\.php", parts.path):
+        ids = [v for k, v in parse_qsl(parts.query) if k == "id"]
+        if ids and ids[0].isdigit():
+            return f"cm:{ids[0]}"
+    if parts.path.startswith("/pluginfile.php/"):
+        rest = parts.path[len("/pluginfile.php/"):]
+        match = _REVISIONED.match(parts.path)
+        if match:
+            ctx = rest.split("/", 1)[0]
+            rest = f"{ctx}/{match.group(1)}/content/{parts.path[match.end():]}"
+        return f"file:{unquote(rest)}"
+    return f"url:{urlunparse(parts._replace(fragment=''))}"
+
+
+def cmid(url: str) -> int | None:
+    """Course-module id from a ``/mod/<kind>/view.php?id=N`` URL."""
+    key = resource_key(url)
+    return int(key[3:]) if key.startswith("cm:") else None
 
 
 def comparable_file_url(url: str) -> str:
