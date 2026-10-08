@@ -51,9 +51,23 @@ def run(conn: sqlite3.Connection, root: Path, materials: Path, options: SyncOpti
 
     print("Moodle Sync" + (" (dry run: nothing will be downloaded or changed)" if options.dry_run else ""))
     with moodle_browser(root / ".browser-profile") as (context, page):
-        sign_in(page)
-        courses = list_courses(page)
+        try:
+            sign_in(page)
+            courses = list_courses(page)
+        except KeyboardInterrupt:
+            raise
+        except Exception as exc:
+            if not options.dry_run:
+                with conn:
+                    failed_run = db.start_run(conn, mode(options), db.utc_now())
+                    db.finish_run(conn, failed_run, "auth_failed" if "/login/" in page.url else "aborted", db.utc_now())
+            print(f"Could not reach My Modules: {type(exc).__name__}. Sign in and run the sync again.")
+            return 2
         if not courses:
+            if not options.dry_run:
+                with conn:
+                    failed_run = db.start_run(conn, mode(options), db.utc_now())
+                    db.finish_run(conn, failed_run, "auth_failed", db.utc_now())
             print("No modules found on My Modules. Check that it shows all courses.")
             return 1
         on_moodle = record_courses(conn, courses)
@@ -80,13 +94,16 @@ def run(conn: sqlite3.Connection, root: Path, materials: Path, options: SyncOpti
             outcome = "aborted"
             print("\nStopped. Everything synced so far is saved.")
         finally:
+            if outcome == "completed" and any(r.problems or r.counts[Outcome.FAILED] for r in reports):
+                outcome = "completed_with_errors"
             with conn:
-                db.finish_run(conn, run_id, outcome, db.utc_now())
+                db.finish_run(conn, run_id, outcome, db.utc_now(), bytes_received=syncer.bytes_received,
+                              selected_count=len(modules), scanned_count=len(reports))
         print("\n" + format_totals(reports, dry_run=options.dry_run))
         others = len(on_moodle) - len(modules)
         if others > 0:
             print(f"({others} other module{'s' if others != 1 else ''} on Moodle not synced; use --select to change)")
-        if outcome != "completed":
+        if outcome not in {"completed", "completed_with_errors"}:
             return 2
         return 1 if any(r.problems for r in reports) else 0
 

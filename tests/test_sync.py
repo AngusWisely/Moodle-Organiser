@@ -68,6 +68,7 @@ class Env:
             run_id = db.start_run(conn, "normal", "2026-10-01T08:00:00Z")
         syncer = Syncer(conn, self.moodle, root=self.root, materials=self.materials, run_id=run_id,
                         options=SyncOptions(**options), clock=self.clock)
+        self.last_syncer = syncer
         return syncer.sync_module(self.module, CourseScan(list(items), complete, []))
 
     def resource(self, key):
@@ -110,6 +111,13 @@ def test_quiet_day_downloads_nothing(env):
     assert report.counts[Outcome.UNCHANGED] == 3 and report.counts[Outcome.NEW] == 0
     assert set(env.moodle.urls()) == {LECTURE + "&redirect=1", FOLDER, RECORDING + "&redirect=1"}
     assert len(env.events()) == 3  # nothing new logged
+
+
+def test_downloaded_bytes_count_actual_file_bodies(env):
+    env.sync()
+    assert env.last_syncer.bytes_received == len(b"lecture v1") + len(b"sheet a") + len(b"sheet b")
+    env.sync()
+    assert env.last_syncer.bytes_received == 0
 
 
 def test_lecturer_replaces_file_at_same_link(env):

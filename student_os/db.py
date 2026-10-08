@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 from .moodle.storage import INCOMING, VERSIONS, resolve_local, sha256_file
 from .moodle.urls import cmid, resource_key
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Resource.status values
 PENDING = "pending"          # seen, no successful download yet (retried every run)
@@ -111,6 +111,12 @@ def migrate(conn: sqlite3.Connection) -> None:
         with conn:
             conn.executescript(_SCHEMA)
             conn.execute("PRAGMA user_version = 1")
+    if version < 2:
+        with conn:
+            conn.execute("ALTER TABLE sync_runs ADD COLUMN bytes_received INTEGER NOT NULL DEFAULT 0")
+            conn.execute("ALTER TABLE sync_runs ADD COLUMN selected_count INTEGER NOT NULL DEFAULT 0")
+            conn.execute("ALTER TABLE sync_runs ADD COLUMN scanned_count INTEGER NOT NULL DEFAULT 0")
+            conn.execute("PRAGMA user_version = 2")
 
 
 def utc_now() -> str:
@@ -302,8 +308,11 @@ def start_run(conn: sqlite3.Connection, mode: str, at: str) -> int:
     ).lastrowid
 
 
-def finish_run(conn: sqlite3.Connection, run_id: int, outcome: str, at: str) -> None:
-    conn.execute("UPDATE sync_runs SET finished_at = ?, outcome = ? WHERE id = ?", (at, outcome, run_id))
+def finish_run(conn: sqlite3.Connection, run_id: int, outcome: str, at: str, *,
+               bytes_received: int = 0, selected_count: int = 0, scanned_count: int = 0) -> None:
+    conn.execute("UPDATE sync_runs SET finished_at = ?, outcome = ?, bytes_received = ?, "
+                 "selected_count = ?, scanned_count = ? WHERE id = ?",
+                 (at, outcome, bytes_received, selected_count, scanned_count, run_id))
 
 
 def log_event(conn: sqlite3.Connection, run_id: int, resource_id: int, kind: str, at: str, *,

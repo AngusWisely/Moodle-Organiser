@@ -95,6 +95,7 @@ class Syncer:
         self.run_id = run_id
         self.options = options
         self.clock = clock
+        self.bytes_received = 0
 
     # --- modules ---------------------------------------------------------------
 
@@ -202,6 +203,8 @@ class Syncer:
 
         url = remote.file_url or resource.source_url
         response = self._fetch(url, known, conditional=action is Plan.CONDITIONAL_GET, direct=direct)
+        if isinstance(response, Downloaded):
+            self.bytes_received += len(response.body)
         incoming = write_incoming(self.materials, response.body) if isinstance(response, Downloaded) else None
         try:
             decision = classify(known, local, self._result(response, incoming))

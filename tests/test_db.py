@@ -2,6 +2,7 @@
 
 import csv
 import hashlib
+import sqlite3
 from dataclasses import fields
 
 import pytest
@@ -36,6 +37,22 @@ def test_connect_creates_schema_and_is_reopenable(tmp_path):
     assert conn.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
     columns = [r["name"] for r in conn.execute("PRAGMA table_info(resources)")]
     assert columns == [f.name for f in fields(db.Resource)]
+
+
+def test_old_database_upgrades_without_losing_run_history(tmp_path):
+    path = tmp_path / "old.sqlite3"
+    conn = sqlite3.connect(path)
+    conn.executescript(db._SCHEMA)
+    conn.execute("PRAGMA user_version = 1")
+    conn.execute("INSERT INTO sync_runs(started_at, finished_at, mode, outcome) VALUES(?,?,?,?)",
+                 (T1, T2, "normal", "completed"))
+    conn.commit()
+    conn.close()
+    upgraded = db.connect(path)
+    row = upgraded.execute("SELECT outcome, bytes_received, selected_count, scanned_count FROM sync_runs").fetchone()
+    assert tuple(row) == ("completed", 0, 0, 0)
+    assert upgraded.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
+    upgraded.close()
 
 
 def test_newer_schema_is_refused(tmp_path):

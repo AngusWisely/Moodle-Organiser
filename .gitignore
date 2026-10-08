@@ -1,5 +1,6 @@
 .browser-profile/
 materials/
+demo-course/
 data/
 *.sqlite3
 *.sqlite3-journal

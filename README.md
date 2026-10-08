@@ -57,6 +57,21 @@ The first sync imported the old `materials/index.csv`, so files downloaded by th
 
 This is a personal helper: Moodle layout changes, or external services such as Echo360, may need manual handling.
 
+## Study dashboard
+
+After syncing, run `python3 dashboard.py` and open the local address it prints (usually [http://127.0.0.1:8767](http://127.0.0.1:8767)). It shows your modules, resources, recent changes, failed items, sync status and previous versions. Filter for lecture notes, exercises or recordings, and search inside text-based PDFs for passages with page numbers. Press Ctrl+C to stop it.
+
+The dashboard reads the existing `data/moodle.sqlite3` database and the `materials/` files. It does not sign in to Moodle. Its PDF search index is built in the background and reused on later launches. Image-only scans, diagrams and equations may not be searchable. It only listens on your own computer.
+
+To try it without a university account:
+
+```bash
+python3 demo.py
+python3 dashboard.py --materials demo-course/materials
+```
+
+The demo has fictional modules, a revised note and a failed download. `python3 measure.py` records the duration of initial PDF indexing, an unchanged repeat and one revised document in `data/measurements.json`. That benchmark tests local indexing; the sync history records the duration of each real Moodle run. Use `python3 -m pytest` to run the dashboard and sync tests.
+
 ## Development
 
 ```bash
